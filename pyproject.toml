@@ -1,0 +1,23 @@
+[project]
+name = "pygamejr"
+version = "0.0.1"
+authors = [
+  { name="Alexander Mironov", email="miralexander@gmail.com" },
+]
+description = "Simple PyGame extension for education."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://github.com/benefitkids/pygamejr"
+Issues = "https://github.com/benefitkids/pygamejr/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

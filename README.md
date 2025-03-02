@@ -1,0 +1,1 @@
+Simple PyGame extension for education.
