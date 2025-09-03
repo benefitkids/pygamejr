@@ -1,0 +1,56 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "map1.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "map1.tmx": {
+            "scale": 1,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 264,
+                "y": 316.5
+            }
+        },
+        "map2.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
+        "sokoban_tilesheet.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        }
+    },
+    "last.exportedFilePath": "C:/projects/pygamejr/src/pygamejr/resources/images/kenney_sokoban-pack",
+    "last.imagePath": "C:/projects/pygamejr/src/pygamejr/resources/images/kenney_sokoban-pack/Tilesheet",
+    "map.height": 8,
+    "map.lastUsedExportFilter": "CSV файлы (*.csv)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 64,
+    "map.tileWidth": 64,
+    "map.width": 8,
+    "openFiles": [
+        "sokoban_tilesheet.tsx",
+        "map1.tmx"
+    ],
+    "project": "map1.tiled-project",
+    "property.type": "string",
+    "recentFiles": [
+        "sokoban_tilesheet.tsx",
+        "map1.tmx",
+        "map2.tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 64,
+        "width": 64
+    }
+}

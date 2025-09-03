@@ -1,0 +1,1 @@
+from .screen_size import get_curr_screen_geometry

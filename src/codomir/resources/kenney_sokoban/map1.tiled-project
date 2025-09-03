@@ -1,0 +1,38 @@
+{
+    "automappingRulesFile": "",
+    "commands": [
+    ],
+    "compatibilityVersion": 1100,
+    "extensionsPath": "extensions",
+    "folders": [
+        "."
+    ],
+    "properties": [
+        {
+            "name": "character_bottom",
+            "propertytype": "",
+            "type": "string",
+            "value": ""
+        },
+        {
+            "name": "character_left",
+            "propertytype": "",
+            "type": "string",
+            "value": ""
+        },
+        {
+            "name": "character_right",
+            "propertytype": "",
+            "type": "string",
+            "value": "[[0, 7], [1, 7], [2, 7])"
+        },
+        {
+            "name": "character_top",
+            "propertytype": "",
+            "type": "string",
+            "value": ""
+        }
+    ],
+    "propertyTypes": [
+    ]
+}
