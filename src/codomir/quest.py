@@ -20,7 +20,7 @@ os.environ['PYGAMEJR_WINDOW_HEIGHT'] = f"{window_height}"
 
 import pygamejr
 from pygamejr.sprite.base import BaseSprite
-from .resources import map1
+from .maps.linear import map1
 
 from pytmx.util_pygame import load_pygame, pygame_image_loader
 
@@ -54,7 +54,10 @@ def set_map(map):
     :param str map: карта, например "pygamejr.resources.quest.map1"
     '''
     global tmxdata
+    global win_position
     tmxdata = load_pygame(map)
+    player.set_position_by_tile(*_get_spawn_position())
+    win_position = _get_win_position()
 
 
 # https://stackoverflow.com/questions/4135928/pygame-display-position
@@ -94,6 +97,7 @@ def _get_position_by_type(tile_type):
             return tile[0], tile[1]
     return 0, 0
 
+win_position = _get_win_position()
 
 class Player(BaseSprite):
     def __init__(self):
@@ -101,14 +105,18 @@ class Player(BaseSprite):
         self._direction = Direction.RIGHT
         self._update_image()
         self.rect = self.image.get_rect()
-        self._tile_x, self._tile_y = _get_spawn_position()
-        self._win_position = _get_win_position()
+        tile_x, tile_y = _get_spawn_position()
+        self.set_position_by_tile(tile_x, tile_y)
         self._is_end = False
-
-        self.rect.centerx = self._tile_x * TILE_SIZE + TILE_SIZE / 2
-        self.rect.centery = self._tile_y * TILE_SIZE + TILE_SIZE / 2
         self.draw()
         pygame.display.flip()
+
+    def set_position_by_tile(self, x, y):
+        self._tile_x = x
+        self._tile_y = y
+        self.rect.centerx = self._tile_x * TILE_SIZE + TILE_SIZE / 2
+        self.rect.centery = self._tile_y * TILE_SIZE + TILE_SIZE / 2
+
 
     def _update_image(self):
         if self._direction == Direction.RIGHT and CHARACTER_TILES['right']:
@@ -199,7 +207,7 @@ class Player(BaseSprite):
         return tmxdata.layernames['walls'].data[tile_y][tile_x] != 0
 
     def _is_win(self, tile_x: int, tile_y: int):
-        return tile_x == self._win_position[0] and tile_y == self._win_position[1]
+        return tile_x == win_position[0] and tile_y == win_position[1]
 
     def _animate_game_over(self, dx: float, dy: float):
         old_x = self.rect.x

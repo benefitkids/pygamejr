@@ -1,7 +1,6 @@
 from codomir import player, wait_quit
 
 player.move_forward()
-player.move_forward()
 player.turn_left()
 player.turn_left()
 player.move_forward()

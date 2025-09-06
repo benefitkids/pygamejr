@@ -3,14 +3,14 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "map1.tmx",
+    "activeFile": "map3.tmx",
     "expandedProjectPaths": [
         "."
     ],
     "fileStates": {
         "map1.tmx": {
             "scale": 1,
-            "selectedLayer": 2,
+            "selectedLayer": 1,
             "viewCenter": {
                 "x": 264,
                 "y": 316.5
@@ -18,7 +18,31 @@
         },
         "map2.tmx": {
             "scale": 1.34150390625,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
+        "map3.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
+        "map4_.tmx": {
+            "scale": 1.34150390625,
             "selectedLayer": 0,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
+        "map5_.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 2,
             "viewCenter": {
                 "x": 255.683191380942,
                 "y": 256.05590740336316
@@ -39,14 +63,19 @@
     "map.width": 8,
     "openFiles": [
         "sokoban_tilesheet.tsx",
-        "map1.tmx"
+        "map1.tmx",
+        "map2.tmx",
+        "map3.tmx"
     ],
     "project": "map1.tiled-project",
     "property.type": "string",
     "recentFiles": [
-        "sokoban_tilesheet.tsx",
+        "map5_.tmx",
         "map1.tmx",
-        "map2.tmx"
+        "map2.tmx",
+        "map3.tmx",
+        "map4_.tmx",
+        "sokoban_tilesheet.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
