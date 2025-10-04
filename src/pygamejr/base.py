@@ -12,7 +12,7 @@ clock = pygame.time.Clock()
 
 def next_frame():
     pygame.display.flip()
-    clock.tick(60) / 1000
+    clock.tick(60)
     screen.fill("black")
     return not is_quit()
 
@@ -41,7 +41,15 @@ def is_quit():
 
 
 def wait_quit():
+    from .sprite.base import sprites
+
     running = True
     while running:
+        clock.tick(60)
+
         if is_quit():
             running = False
+
+        for sprite in sprites:
+            sprite.draw()
+        pygame.display.flip()
