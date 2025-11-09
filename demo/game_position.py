@@ -23,9 +23,4 @@ center = pygamejr.ImageSprite(pygamejr.resources.image.coin_silver)
 center.rect.centerx = pygamejr.screen.get_width() / 2
 center.rect.centery = pygamejr.screen.get_height() / 2
 
-for frame in pygamejr.every_frame():
-    top_left.draw()
-    top_right.draw()
-    bottom_left.draw()
-    bottom_right.draw()
-    center.draw()
+pygamejr.wait_quit()

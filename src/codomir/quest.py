@@ -3,6 +3,7 @@ import os
 import json
 import pygame
 
+# TODO: Переименовать в player_sprite.py и часть кода вынести в __init__.py
 # from pygamejr.base import window_width
 
 pygame.init()
@@ -100,8 +101,8 @@ def _get_position_by_type(tile_type):
 win_position = _get_win_position()
 
 class Player(BaseSprite):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args):
+        super().__init__(*args)
         self._direction = Direction.RIGHT
         self._update_image()
         self.rect = self.image.get_rect()
@@ -233,15 +234,17 @@ class Player(BaseSprite):
     def _animate_win(self):
         scale = 1
         for d_scale in [0.01, -0.01]*10:
+            if pygamejr.is_quit():
+                break
             for dt in pygamejr.every_frame(30):
                 scale += d_scale
                 self._draw_map()
                 player_surface = self._scale_surface(self.image, scale)
                 pygamejr.screen.blit(player_surface, self.rect)
 
-    def draw(self):
+    def draw(self, *args, **kwargs):
         self._draw_map()
-        super().draw()
+        super().draw( *args, **kwargs)
 
     def _draw_map(self):
         _blit_all_tiles(pygamejr.screen, tmxdata, (0, 0))

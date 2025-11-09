@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "map3.tmx",
+    "activeFile": "map_loop_nested2.tmx",
     "expandedProjectPaths": [
         "."
     ],
@@ -16,20 +16,36 @@
                 "y": 316.5
             }
         },
+        "map10.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
         "map2.tmx": {
             "scale": 1.34150390625,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 255.683191380942,
-                "y": 256.05590740336316
+                "x": 289.60034942127106,
+                "y": 256.0559074033632
             }
         },
         "map3.tmx": {
             "scale": 1.34150390625,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 255.683191380942,
-                "y": 256.05590740336316
+                "x": 256.0559074033632,
+                "y": 256.0559074033632
+            }
+        },
+        "map4.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 256.0559074033632,
+                "y": 256.0559074033632
             }
         },
         "map4_.tmx": {
@@ -40,12 +56,100 @@
                 "y": 256.05590740336316
             }
         },
+        "map5.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 256.0559074033632,
+                "y": 256.0559074033632
+            }
+        },
         "map5_.tmx": {
             "scale": 1.34150390625,
             "selectedLayer": 2,
             "viewCenter": {
                 "x": 255.683191380942,
                 "y": 256.05590740336316
+            }
+        },
+        "map6.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 256.4286234257844,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop1.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop2.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 256.4286234257844,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop3.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop4.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 256.4286234257844,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop5.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 256.4286234257844,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop6.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 256.4286234257844,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop7.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop8.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 255.683191380942,
+                "y": 256.05590740336316
+            }
+        },
+        "map_loop_nested2.tmx": {
+            "scale": 1.34150390625,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 257.91948751546914,
+                "y": 349.9803450535051
             }
         },
         "sokoban_tilesheet.tsx": {
@@ -63,19 +167,27 @@
     "map.width": 8,
     "openFiles": [
         "sokoban_tilesheet.tsx",
-        "map1.tmx",
         "map2.tmx",
-        "map3.tmx"
+        "map3.tmx",
+        "map4.tmx",
+        "map5.tmx",
+        "map_loop_nested2.tmx"
     ],
     "project": "map1.tiled-project",
     "property.type": "string",
     "recentFiles": [
-        "map5_.tmx",
-        "map1.tmx",
+        "sokoban_tilesheet.tsx",
         "map2.tmx",
         "map3.tmx",
-        "map4_.tmx",
-        "sokoban_tilesheet.tsx"
+        "map4.tmx",
+        "map5.tmx",
+        "map_loop_nested2.tmx",
+        "map6.tmx",
+        "map_loop4.tmx",
+        "map_loop5.tmx",
+        "map_loop6.tmx",
+        "map_loop2.tmx",
+        "map_loop1.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {

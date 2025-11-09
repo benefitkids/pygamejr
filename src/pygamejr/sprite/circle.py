@@ -20,4 +20,4 @@ class CircleSprite(BaseSprite):
                            radius
         )
 
-        self.rect = self.image.get_rect()
+        self.rect = self.image.get_frect()

@@ -1,1 +1,1 @@
-from . import image
+from . import image, image_tanks
