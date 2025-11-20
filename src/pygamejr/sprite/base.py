@@ -8,8 +8,6 @@ SURFACE_COLOR = (167, 255, 100)
 WIDTH = 500
 HEIGHT = 500
 
-sprites = []
-
 
 class BaseSprite(pygame.sprite.Sprite):
     def __init__(self, sprite_angle: float = 0, *args):
@@ -29,12 +27,12 @@ class BaseSprite(pygame.sprite.Sprite):
                 pygame.draw.rect(screen, (255, 0, 0), self.rect, 1)
 
     def move_forward(self, distance: float = 1.0):
-        print(self.rect.x, self._angle, distance * cos(radians(self._angle)), self.rect.x + distance * sin(radians(self._angle)))
         self.rect.x += distance * sin(radians(self._angle))
         self.rect.y += distance * cos(radians(self._angle))
 
     def rotate(self, angle: float):
-        print(self._angle, angle)
         self._angle += angle
         self._angle %= 360
-        print(self._angle)
+
+
+sprites: list[BaseSprite] = []

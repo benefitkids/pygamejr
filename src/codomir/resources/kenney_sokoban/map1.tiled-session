@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "map_loop_nested2.tmx",
+    "activeFile": "map6.tmx",
     "expandedProjectPaths": [
         "."
     ],
@@ -20,7 +20,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 255.683191380942,
+                "x": 255.31047535852076,
                 "y": 256.05590740336316
             }
         },
@@ -28,8 +28,8 @@
             "scale": 1.34150390625,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 289.60034942127106,
-                "y": 256.0559074033632
+                "x": 255.31047535852076,
+                "y": 256.05590740336316
             }
         },
         "map3.tmx": {
@@ -37,15 +37,15 @@
             "selectedLayer": 1,
             "viewCenter": {
                 "x": 256.0559074033632,
-                "y": 256.0559074033632
+                "y": 256.05590740336316
             }
         },
         "map4.tmx": {
             "scale": 1.34150390625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 256.0559074033632,
-                "y": 256.0559074033632
+                "x": 255.31047535852076,
+                "y": 256.05590740336316
             }
         },
         "map4_.tmx": {
@@ -60,8 +60,8 @@
             "scale": 1.34150390625,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 256.0559074033632,
-                "y": 256.0559074033632
+                "x": 255.31047535852076,
+                "y": 256.05590740336316
             }
         },
         "map5_.tmx": {
@@ -76,7 +76,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 256.4286234257844,
+                "x": 256.80133944820557,
                 "y": 256.05590740336316
             }
         },
@@ -148,7 +148,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 257.91948751546914,
+                "x": 257.546771493048,
                 "y": 349.9803450535051
             }
         },
@@ -171,7 +171,9 @@
         "map3.tmx",
         "map4.tmx",
         "map5.tmx",
-        "map_loop_nested2.tmx"
+        "map_loop_nested2.tmx",
+        "map10.tmx",
+        "map6.tmx"
     ],
     "project": "map1.tiled-project",
     "property.type": "string",
@@ -182,12 +184,12 @@
         "map4.tmx",
         "map5.tmx",
         "map_loop_nested2.tmx",
+        "map10.tmx",
         "map6.tmx",
         "map_loop4.tmx",
         "map_loop5.tmx",
         "map_loop6.tmx",
-        "map_loop2.tmx",
-        "map_loop1.tmx"
+        "map_loop2.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {

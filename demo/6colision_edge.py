@@ -16,7 +16,6 @@ for frame in pygamejr.every_frame():
         if new_top > 0:
             bee.rect.top = new_top
     if keys[pygame.K_s]:
-        print(bee.rect.bottom)
         new_bottom = bee.rect.bottom + SPEED
         if new_bottom < pygamejr.screen.get_height():
             bee.rect.bottom = new_bottom

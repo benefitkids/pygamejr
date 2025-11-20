@@ -28,13 +28,14 @@ from pytmx.util_pygame import load_pygame, pygame_image_loader
 # Инициализипуем display перед тем как загружать картинки.
 # Иначе будет ошибка.
 # pygamejr.get_screen()
-tmxdata = load_pygame(map1)
+# tmxdata = load_pygame(map1)
+tilemap = pygamejr.TileMap(map1)
 
 CHARACTER_TILES = {
-    'right': json.loads(tmxdata.properties['character_right']) if 'character_right' in tmxdata.properties else None,
-    'bottom': json.loads(tmxdata.properties['character_bottom']) if 'character_bottom' in tmxdata.properties else None,
-    'left': json.loads(tmxdata.properties['character_left']) if 'character_left' in tmxdata.properties else None,
-    'top': json.loads(tmxdata.properties['character_top']) if 'character_top' in tmxdata.properties else None,
+    'right': json.loads(tilemap.tmxdata.properties['character_right']) if 'character_right' in tilemap.tmxdata.properties else None,
+    'bottom': json.loads(tilemap.tmxdata.properties['character_bottom']) if 'character_bottom' in tilemap.tmxdata.properties else None,
+    'left': json.loads(tilemap.tmxdata.properties['character_left']) if 'character_left' in tilemap.tmxdata.properties else None,
+    'top': json.loads(tilemap.tmxdata.properties['character_top']) if 'character_top' in tilemap.tmxdata.properties else None,
 }
 
 # Судя по всему в pytmx есть ошибка, опция load_all_tiles не работает.
@@ -42,9 +43,9 @@ CHARACTER_TILES = {
 # tmxdata.gidmap = {}
 # tmxdata.reload_images()
 def load_image(tile_x, tile_y):
-    ts = tmxdata.tilesets[0]
+    ts = tilemap.tmxdata.tilesets[0]
     colorkey = getattr(ts, "trans", None)
-    path = os.path.join(os.path.dirname(tmxdata.filename), ts.source)
+    path = os.path.join(os.path.dirname(tilemap.tmxdata.filename), ts.source)
     loader = pygame_image_loader(path, colorkey, tileset=ts)
     rect = (tile_x * ts.tilewidth, tile_y * ts.tileheight, ts.tilewidth, ts.tileheight)
     return loader(rect, None)
@@ -54,9 +55,9 @@ def set_map(map):
     Устанавливает карту.
     :param str map: карта, например "pygamejr.resources.quest.map1"
     '''
-    global tmxdata
+    global tilemap
     global win_position
-    tmxdata = load_pygame(map)
+    tilemap = pygamejr.TileMap(map)
     player.set_position_by_tile(*_get_spawn_position())
     win_position = _get_win_position()
 
@@ -75,8 +76,8 @@ class Direction(Enum):
 directions = (Direction.TOP, Direction.RIGHT, Direction.BOTTOM, Direction.LEFT)
 
 def init(src):
-    global tmxdata
-    tmxdata = load_pygame(src)
+    global tilemap
+    tilemap = pygamejr.TileMap(src)
 
 def _blit_all_tiles(window, tmxdata, world_offset):
     for layer in tmxdata:
@@ -92,9 +93,9 @@ def _get_win_position():
     return _get_position_by_type('Win')
 
 def _get_position_by_type(tile_type):
-    for tile in  tmxdata.layernames['objects']:
+    for tile in  tilemap.tmxdata.layernames['objects']:
         tile_id = tile[2]
-        if tile_id and tmxdata.tile_properties[tile_id]['type'] == tile_type:
+        if tile_id and tilemap.tmxdata.tile_properties[tile_id]['type'] == tile_type:
             return tile[0], tile[1]
     return 0, 0
 
@@ -205,7 +206,7 @@ class Player(BaseSprite):
         self._tile_y = tile_y
 
     def _is_wall(self, tile_x: int, tile_y: int):
-        return tmxdata.layernames['walls'].data[tile_y][tile_x] != 0
+        return tilemap.tmxdata.layernames['walls'].data[tile_y][tile_x] != 0
 
     def _is_win(self, tile_x: int, tile_y: int):
         return tile_x == win_position[0] and tile_y == win_position[1]
@@ -247,7 +248,7 @@ class Player(BaseSprite):
         super().draw( *args, **kwargs)
 
     def _draw_map(self):
-        _blit_all_tiles(pygamejr.screen, tmxdata, (0, 0))
+        _blit_all_tiles(pygamejr.screen, tilemap.tmxdata, (0, 0))
 
 
 player = Player()

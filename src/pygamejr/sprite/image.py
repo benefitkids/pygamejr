@@ -1,11 +1,20 @@
+import pathlib
 import pygame
 from .base import BaseSprite
 
 
 class ImageSprite(BaseSprite):
-    def __init__(self, filename, sprite_angle: float = 0, *args):
-        super().__init__(sprite_angle,*args)
-        self._original_image = pygame.image.load(filename).convert_alpha()
+    def __init__(
+            self,
+            filename: str | pathlib.Path = None,
+            image: pygame.Surface = None,
+            sprite_angle: float = 0,
+            *args):
+        super().__init__(sprite_angle, *args)
+        if filename:
+            self._original_image = pygame.image.load(filename).convert_alpha()
+        else:
+            self._original_image = image
         self.image = self._original_image
         self.rect = self.image.get_frect()
         self.mask = pygame.mask.from_surface(self.image)

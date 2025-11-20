@@ -10,6 +10,8 @@ screen = pygame.display.set_mode((window_width, window_height), pygame.RESIZABLE
 
 clock = pygame.time.Clock()
 
+global_scene = None
+
 def next_frame():
     from .sprite.base import sprites
 

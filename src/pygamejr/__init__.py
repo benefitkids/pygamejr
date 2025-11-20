@@ -2,6 +2,7 @@ from .base import every_frame, wait_quit, is_quit, screen, next_frame
 from .sprite.circle import CircleSprite
 from .sprite.image import ImageSprite
 from .sprite.rect import RectSprite
+from .tilemap import TileMap
 from . import resources
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     CircleSprite,
     ImageSprite,
     RectSprite,
+    TileMap,
     resources,
 ]
