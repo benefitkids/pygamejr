@@ -1,12 +1,38 @@
 {
-    "activeFile": "",
+    "activeFile": "map.tmx",
     "expandedProjectPaths": [
+        "."
     ],
     "fileStates": {
+        "map.tmx": {
+            "scale": 0.866875,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 253.20836337418893,
+                "y": 524.2970439798127
+            }
+        },
+        "map_final.tmx": {
+            "scale": 0.866875,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 295.89041095890417,
+                "y": 475.84715212689264
+            }
+        },
+        "medieval_tilesheet.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        }
     },
     "openFiles": [
+        "map.tmx",
+        "medieval_tilesheet.tsx"
     ],
     "project": "rpg.tiled-project",
     "recentFiles": [
+        "medieval_tilesheet.tsx",
+        "map.tmx",
+        "map_final.tmx"
     ]
 }

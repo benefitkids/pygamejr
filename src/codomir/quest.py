@@ -101,6 +101,7 @@ def _get_position_by_type(tile_type):
 
 win_position = _get_win_position()
 
+
 class Player(BaseSprite):
     def __init__(self, *args):
         super().__init__(*args)

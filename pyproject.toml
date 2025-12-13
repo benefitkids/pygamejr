@@ -1,6 +1,6 @@
 [project]
 name = "pygamejr"
-version = "0.0.13"
+version = "0.0.17"
 authors = [
   { name="Alexander Mironov", email="miralexander@gmail.com" },
 ]
