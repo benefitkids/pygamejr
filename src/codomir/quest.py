@@ -57,9 +57,22 @@ def set_map(map):
     '''
     global tilemap
     global win_position
+    global CHARACTER_TILES
     tilemap = pygamejr.TileMap(map)
+    CHARACTER_TILES = {
+        'right': json.loads(
+            tilemap.tmxdata.properties['character_right']) if 'character_right' in tilemap.tmxdata.properties else None,
+        'bottom': json.loads(tilemap.tmxdata.properties[
+                                 'character_bottom']) if 'character_bottom' in tilemap.tmxdata.properties else None,
+        'left': json.loads(
+            tilemap.tmxdata.properties['character_left']) if 'character_left' in tilemap.tmxdata.properties else None,
+        'top': json.loads(
+            tilemap.tmxdata.properties['character_top']) if 'character_top' in tilemap.tmxdata.properties else None,
+    }
     player.set_position_by_tile(*_get_spawn_position())
+    player._update_image()
     win_position = _get_win_position()
+
 
 
 # https://stackoverflow.com/questions/4135928/pygame-display-position
@@ -189,10 +202,11 @@ class Player(BaseSprite):
             self._is_end = True
             return
 
+        character_tiles_count = len(self.images)
         for i, dt in enumerate(pygamejr.every_frame(TILE_SIZE)):
             self.rect.x += dx
             self.rect.y += dy
-            image_index = int((i // (TILE_SIZE / 6)) % 3)
+            image_index = int((i // (TILE_SIZE / 6)) % character_tiles_count)
             self.image = self.images[image_index]
             self.draw()
 

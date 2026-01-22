@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "map6.tmx",
+    "activeFile": "map2.tmx",
     "expandedProjectPaths": [
         "."
     ],
@@ -20,7 +20,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 255.31047535852076,
+                "x": 255.683191380942,
                 "y": 256.05590740336316
             }
         },
@@ -28,7 +28,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 255.31047535852076,
+                "x": 255.683191380942,
                 "y": 256.05590740336316
             }
         },
@@ -36,7 +36,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 256.0559074033632,
+                "x": 255.683191380942,
                 "y": 256.05590740336316
             }
         },
@@ -44,7 +44,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 255.31047535852076,
+                "x": 255.683191380942,
                 "y": 256.05590740336316
             }
         },
@@ -60,7 +60,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 255.31047535852076,
+                "x": 255.683191380942,
                 "y": 256.05590740336316
             }
         },
@@ -76,7 +76,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 256.80133944820557,
+                "x": 172.940234403436,
                 "y": 256.05590740336316
             }
         },
@@ -148,8 +148,8 @@
             "scale": 1.34150390625,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 257.546771493048,
-                "y": 349.9803450535051
+                "x": 255.683191380942,
+                "y": 352.2166411880323
             }
         },
         "sokoban_tilesheet.tsx": {
@@ -179,13 +179,13 @@
     "property.type": "string",
     "recentFiles": [
         "sokoban_tilesheet.tsx",
-        "map2.tmx",
-        "map3.tmx",
-        "map4.tmx",
-        "map5.tmx",
-        "map_loop_nested2.tmx",
-        "map10.tmx",
         "map6.tmx",
+        "map10.tmx",
+        "map_loop_nested2.tmx",
+        "map5.tmx",
+        "map4.tmx",
+        "map3.tmx",
+        "map2.tmx",
         "map_loop4.tmx",
         "map_loop5.tmx",
         "map_loop6.tmx",
