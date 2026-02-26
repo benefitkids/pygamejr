@@ -10,27 +10,35 @@ screen = pygame.display.set_mode((window_width, window_height), pygame.RESIZABLE
 
 clock = pygame.time.Clock()
 
-global_scene = None
+_current_scene = None
+
+def get_current_scene():
+    global _current_scene
+    if _current_scene is None:
+        from .scene import Scene
+        _current_scene = Scene()
+    return _current_scene
+
+def set_scene(scene) -> None:
+    global _current_scene
+    _current_scene = scene
 
 def next_frame():
-    from .sprite.base import sprites
-
+    scene = get_current_scene()
     screen.fill("black")
-    for sprite in sprites:
-        sprite.draw()
+    scene.update()
+    scene.draw()
     pygame.display.flip()
     clock.tick(60)
     return not is_quit()
 
 def every_frame(frame_count=0, draw_sprites_rect=False):
-    from .sprite.base import sprites
-
     running = True
     frame = -1
     while running:
         dt = clock.tick(60) / 1000
 
-        if is_quit() or frame >= frame_count :
+        if is_quit() or frame >= frame_count:
             break
 
         if frame_count:
@@ -40,8 +48,9 @@ def every_frame(frame_count=0, draw_sprites_rect=False):
 
         yield dt
 
-        for sprite in sprites:
-            sprite.draw(draw_rect=draw_sprites_rect)
+        scene = get_current_scene()
+        scene.update()
+        scene.draw(draw_rect=draw_sprites_rect)
 
         pygame.display.flip()
 
@@ -50,7 +59,7 @@ _is_quit = False
 def is_quit():
     global _is_quit
 
-    if _is_quit :
+    if _is_quit:
         return True
 
     for event in pygame.event.get():
