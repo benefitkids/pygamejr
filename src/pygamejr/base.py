@@ -34,15 +34,15 @@ def set_scene(scene) -> None:
 
 
 def next_frame():
+    dt = clock.tick(60) / 1000
     screen.fill("black")
     if _current_scene is not None:
-        _current_scene.update()
+        _current_scene.update(dt)
         _current_scene.draw()
     global_scene = get_global_scene()
-    global_scene.update()
+    global_scene.update(dt)
     global_scene.draw()
     pygame.display.flip()
-    clock.tick(60)
     return not is_quit()
 
 
@@ -63,11 +63,11 @@ def every_frame(frame_count=0, draw_sprites_rect=False):
         yield dt
 
         if _current_scene is not None:
-            _current_scene.update()
+            _current_scene.update(dt)
             _current_scene.draw(draw_rect=draw_sprites_rect)
 
         global_scene = get_global_scene()
-        global_scene.update()
+        global_scene.update(dt)
         global_scene.draw(draw_rect=draw_sprites_rect)
 
         pygame.display.flip()

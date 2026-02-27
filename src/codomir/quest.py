@@ -2,17 +2,14 @@ from enum import Enum
 import os
 import json
 import pygame
+from pygame.sprite import Group
 
-# TODO: Переименовать в player_sprite.py и часть кода вынести в __init__.py
-# from pygamejr.base import window_width
-
+# https://stackoverflow.com/questions/4135928/pygame-display-position
 pygame.init()
 
 display_info = pygame.display.Info()
 screen_width = display_info.current_w
 
-# https://stackoverflow.com/questions/4135928/pygame-display-position
-# import pygame
 window_width = 8*64
 window_height = 8*64
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (screen_width - window_width, 50)
@@ -20,28 +17,22 @@ os.environ['PYGAMEJR_WINDOW_WIDTH'] = f"{window_width}"
 os.environ['PYGAMEJR_WINDOW_HEIGHT'] = f"{window_height}"
 
 import pygamejr
+from pygamejr.scene import DEFAULT_LAYER
 from pygamejr.sprite.base import BaseSprite
 from .maps.linear import map1
 
 from pytmx.util_pygame import load_pygame, pygame_image_loader
 
-# Инициализипуем display перед тем как загружать картинки.
-# Иначе будет ошибка.
-# pygamejr.get_screen()
-# tmxdata = load_pygame(map1)
 tilemap = pygamejr.TileMap(map1)
 
 CHARACTER_TILES = {
-    'right': json.loads(tilemap.tmxdata.properties['character_right']) if 'character_right' in tilemap.tmxdata.properties else None,
+    'right':  json.loads(tilemap.tmxdata.properties['character_right'])  if 'character_right'  in tilemap.tmxdata.properties else None,
     'bottom': json.loads(tilemap.tmxdata.properties['character_bottom']) if 'character_bottom' in tilemap.tmxdata.properties else None,
-    'left': json.loads(tilemap.tmxdata.properties['character_left']) if 'character_left' in tilemap.tmxdata.properties else None,
-    'top': json.loads(tilemap.tmxdata.properties['character_top']) if 'character_top' in tilemap.tmxdata.properties else None,
+    'left':   json.loads(tilemap.tmxdata.properties['character_left'])   if 'character_left'   in tilemap.tmxdata.properties else None,
+    'top':    json.loads(tilemap.tmxdata.properties['character_top'])    if 'character_top'    in tilemap.tmxdata.properties else None,
 }
 
-# Судя по всему в pytmx есть ошибка, опция load_all_tiles не работает.
-# Воркэраунд под эту ошибку.
-# tmxdata.gidmap = {}
-# tmxdata.reload_images()
+# Workaround for a pytmx bug: load_all_tiles option does not work.
 def load_image(tile_x, tile_y):
     ts = tilemap.tmxdata.tilesets[0]
     colorkey = getattr(ts, "trans", None)
@@ -50,32 +41,6 @@ def load_image(tile_x, tile_y):
     rect = (tile_x * ts.tilewidth, tile_y * ts.tileheight, ts.tilewidth, ts.tileheight)
     return loader(rect, None)
 
-def set_map(map):
-    '''
-    Устанавливает карту.
-    :param str map: карта, например "pygamejr.resources.quest.map1"
-    '''
-    global tilemap
-    global win_position
-    global CHARACTER_TILES
-    tilemap = pygamejr.TileMap(map)
-    CHARACTER_TILES = {
-        'right': json.loads(
-            tilemap.tmxdata.properties['character_right']) if 'character_right' in tilemap.tmxdata.properties else None,
-        'bottom': json.loads(tilemap.tmxdata.properties[
-                                 'character_bottom']) if 'character_bottom' in tilemap.tmxdata.properties else None,
-        'left': json.loads(
-            tilemap.tmxdata.properties['character_left']) if 'character_left' in tilemap.tmxdata.properties else None,
-        'top': json.loads(
-            tilemap.tmxdata.properties['character_top']) if 'character_top' in tilemap.tmxdata.properties else None,
-    }
-    player.set_position_by_tile(*_get_spawn_position())
-    player._update_image()
-    win_position = _get_win_position()
-
-
-
-# https://stackoverflow.com/questions/4135928/pygame-display-position
 
 TILE_SIZE = 64
 
@@ -86,31 +51,66 @@ class Direction(Enum):
     BOTTOM = 3
     LEFT = 4
 
+
 directions = (Direction.TOP, Direction.RIGHT, Direction.BOTTOM, Direction.LEFT)
 
-def init(src):
-    global tilemap
-    tilemap = pygamejr.TileMap(src)
-
-def _blit_all_tiles(window, tmxdata, world_offset):
-    for layer in tmxdata:
-        for tile in layer.tiles():
-            x = tile[0] * TILE_SIZE + world_offset[0]
-            y = tile[1] * TILE_SIZE + world_offset[1]
-            window.blit(tile[2], (x, y))
 
 def _get_spawn_position():
     return _get_position_by_type('Spawn')
 
+
 def _get_win_position():
     return _get_position_by_type('Win')
 
+
 def _get_position_by_type(tile_type):
-    for tile in  tilemap.tmxdata.layernames['objects']:
+    for tile in tilemap.tmxdata.layernames['objects']:
         tile_id = tile[2]
         if tile_id and tilemap.tmxdata.tile_properties[tile_id]['type'] == tile_type:
             return tile[0], tile[1]
     return 0, 0
+
+
+# =================================================================
+# QUEST SCENE
+#
+# Loads tilemap layers and renders them in the correct order:
+# map tiles first, then the player sprite on top.
+# =================================================================
+
+class QuestScene(pygamejr.Scene):
+    def __init__(self, tilemap):
+        super().__init__()
+        # Temporarily set this scene as current so that ImageSprite
+        # objects created inside get_layer_sprites() auto-add here.
+        previous_scene = pygamejr.get_current_scene()
+        pygamejr.set_scene(self)
+        for layer in tilemap.tmxdata.layers:
+            if hasattr(layer, 'tiles'):
+                sprites = tilemap.get_layer_sprites(layer.name)
+                self.add_sprite_list(layer.name, Group(sprites))
+        # Clear DEFAULT_LAYER — tile sprites now live in named layer groups.
+        self._name_mapping[DEFAULT_LAYER].empty()
+        pygamejr.set_scene(previous_scene)
+
+    def draw(self, draw_rect=False):
+        # Draw tilemap layers first, then player (DEFAULT_LAYER) on top.
+        for name, sprite_list in self._name_mapping.items():
+            if name == DEFAULT_LAYER:
+                continue
+            for sprite in sprite_list:
+                sprite.draw(draw_rect=draw_rect)
+        for sprite in self._name_mapping[DEFAULT_LAYER]:
+            sprite.draw(draw_rect=draw_rect)
+
+
+# =================================================================
+# Build initial scene and set it before creating Player,
+# so Player auto-adds to quest_scene's DEFAULT_LAYER.
+# =================================================================
+
+quest_scene = QuestScene(tilemap)
+pygamejr.set_scene(quest_scene)
 
 win_position = _get_win_position()
 
@@ -124,8 +124,7 @@ class Player(BaseSprite):
         tile_x, tile_y = _get_spawn_position()
         self.set_position_by_tile(tile_x, tile_y)
         self._is_end = False
-        self.draw()
-        pygame.display.flip()
+        pygamejr.next_frame()
 
     def set_position_by_tile(self, x, y):
         self._tile_x = x
@@ -133,36 +132,29 @@ class Player(BaseSprite):
         self.rect.centerx = self._tile_x * TILE_SIZE + TILE_SIZE / 2
         self.rect.centery = self._tile_y * TILE_SIZE + TILE_SIZE / 2
 
-
     def _update_image(self):
         if self._direction == Direction.RIGHT and CHARACTER_TILES['right']:
             tiles = CHARACTER_TILES['right']
         elif self._direction == Direction.LEFT and CHARACTER_TILES['left']:
-            tiles =  CHARACTER_TILES['left']
+            tiles = CHARACTER_TILES['left']
         elif self._direction == Direction.TOP and CHARACTER_TILES['top']:
-            tiles =  CHARACTER_TILES['top']
+            tiles = CHARACTER_TILES['top']
         else:
             tiles = CHARACTER_TILES['bottom']
-
         self.images = [load_image(*tile) for tile in tiles]
         self.image = self.images[0]
-        # self.rect = self.image.get_rect()
 
     def turn_right(self):
         direction_index = directions.index(self._direction)
-        direction_index = (direction_index + 1) % len(directions)
-        self._direction = directions[direction_index]
+        self._direction = directions[(direction_index + 1) % len(directions)]
         self._update_image()
-        self.draw()
-        pygame.display.flip()
+        pygamejr.next_frame()
 
     def turn_left(self):
         direction_index = directions.index(self._direction)
-        direction_index = (direction_index - 1) % len(directions)
-        self._direction = directions[direction_index]
+        self._direction = directions[(direction_index - 1) % len(directions)]
         self._update_image()
-        self.draw()
-        pygame.display.flip()
+        pygamejr.next_frame()
 
     def _move_top(self):
         self._direction = Direction.TOP
@@ -203,15 +195,13 @@ class Player(BaseSprite):
             return
 
         character_tiles_count = len(self.images)
+        # Scene draws each frame automatically after the yield in every_frame().
         for i, dt in enumerate(pygamejr.every_frame(TILE_SIZE)):
             self.rect.x += dx
             self.rect.y += dy
-            image_index = int((i // (TILE_SIZE / 6)) % character_tiles_count)
-            self.image = self.images[image_index]
-            self.draw()
+            self.image = self.images[int((i // (TILE_SIZE / 6)) % character_tiles_count)]
 
         self.image = self.images[0]
-        self.draw()
 
         if self._is_win(tile_x, tile_y):
             self._animate_win()
@@ -231,6 +221,7 @@ class Player(BaseSprite):
         old_y = self.rect.y
         max_delta = TILE_SIZE / 5
         delta = 0
+        # Scene draws each frame automatically.
         for dt in pygamejr.every_frame():
             if delta > max_delta:
                 self.rect.x = old_x
@@ -240,7 +231,6 @@ class Player(BaseSprite):
                 self.rect.x += dx
                 self.rect.y += dy
                 delta += 1
-            self.draw()
 
     def _scale_surface(self, surf, scale: float):
         width = round(surf.get_width() * scale)
@@ -248,29 +238,55 @@ class Player(BaseSprite):
         return pygame.transform.smoothscale(surf, (width, height))
 
     def _animate_win(self):
+        # Temporarily change self.image each frame — scene draws it automatically.
         scale = 1
-        for d_scale in [0.01, -0.01]*10:
+        original_image = self.images[0]
+        for d_scale in [0.01, -0.01] * 10:
             if pygamejr.is_quit():
                 break
             for dt in pygamejr.every_frame(30):
                 scale += d_scale
-                self._draw_map()
-                player_surface = self._scale_surface(self.image, scale)
-                pygamejr.screen.blit(player_surface, self.rect)
-
-    def draw(self, *args, **kwargs):
-        self._draw_map()
-        super().draw( *args, **kwargs)
-
-    def _draw_map(self):
-        _blit_all_tiles(pygamejr.screen, tilemap.tmxdata, (0, 0))
+                self.image = self._scale_surface(original_image, scale)
+        self.image = original_image
 
 
 player = Player()
-player.draw()
+
+
+def set_map(map):
+    '''
+    Sets the map.
+    :param str map: map path, e.g. codomir.maps.linear.map1
+    '''
+    global tilemap, quest_scene, win_position, CHARACTER_TILES
+
+    tilemap = pygamejr.TileMap(map)
+    CHARACTER_TILES = {
+        'right':  json.loads(tilemap.tmxdata.properties['character_right'])  if 'character_right'  in tilemap.tmxdata.properties else None,
+        'bottom': json.loads(tilemap.tmxdata.properties['character_bottom']) if 'character_bottom' in tilemap.tmxdata.properties else None,
+        'left':   json.loads(tilemap.tmxdata.properties['character_left'])   if 'character_left'   in tilemap.tmxdata.properties else None,
+        'top':    json.loads(tilemap.tmxdata.properties['character_top'])    if 'character_top'    in tilemap.tmxdata.properties else None,
+    }
+
+    old_scene = quest_scene
+    quest_scene = QuestScene(tilemap)
+
+    # Move player from old scene to new scene.
+    old_scene.remove(player)
+    quest_scene.add(player)
+    pygamejr.set_scene(quest_scene)
+
+    player.set_position_by_tile(*_get_spawn_position())
+    player._update_image()
+    win_position = _get_win_position()
+
+
+def init(src):
+    set_map(src)
+
 
 __all__ = [
     player,
     init,
-    set_map
+    set_map,
 ]

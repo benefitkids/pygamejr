@@ -38,9 +38,9 @@ class Scene:
     def get_sprite_list(self, name: str) -> AbstractGroup | None:
         return self._name_mapping.get(name)
 
-    def update(self) -> None:
+    def update(self, dt: float = 0) -> None:
         for sprite_list in self._name_mapping.values():
-            sprite_list.update()
+            sprite_list.update(dt)
 
     def draw(self, draw_rect: bool = False) -> None:
         for sprite_list in self._name_mapping.values():
