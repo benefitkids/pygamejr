@@ -19,9 +19,15 @@ class TextSprite(BaseSprite):
         self._render_text()
 
     def _render_text(self):
+        try:
+            old_topleft = self.rect.topleft
+        except AttributeError:
+            old_topleft = None
         self._original_image = self._font.render(self._text, True, self._color)
         self.image = self._original_image
         self.rect = self.image.get_frect()
+        if old_topleft is not None:
+            self.rect.topleft = old_topleft
         self.mask = pygame.mask.from_surface(self.image)
 
     @property

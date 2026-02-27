@@ -1,4 +1,4 @@
-from .base import every_frame, wait_quit, is_quit, screen, next_frame, set_scene, get_current_scene
+from .base import every_frame, wait_quit, is_quit, screen, next_frame, set_scene, get_current_scene, get_global_scene
 from .sprite.circle import CircleSprite
 from .sprite.image import ImageSprite
 from .sprite.rect import RectSprite
@@ -16,6 +16,7 @@ __all__ = [
     next_frame,
     set_scene,
     get_current_scene,
+    get_global_scene,
     CircleSprite,
     ImageSprite,
     RectSprite,

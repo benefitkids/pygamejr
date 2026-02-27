@@ -1,6 +1,6 @@
 from math import sin, cos, radians
 import pygame
-from ..base import screen, get_current_scene
+from ..base import screen, get_current_scene, get_global_scene
 
 # GLOBAL VARIABLES
 COLOR = (255, 100, 98)
@@ -15,7 +15,7 @@ class BaseSprite(pygame.sprite.Sprite):
         self._is_visible = visible
         self._sprite_angle = sprite_angle
         self._angle = sprite_angle
-        get_current_scene().add(self)
+        (get_current_scene() or get_global_scene()).add(self)
 
     def __del__(self):
         self.kill()

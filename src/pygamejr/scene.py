@@ -14,7 +14,7 @@ class Scene:
         from .base import get_current_scene, set_scene
 
         scene = cls()
-        previous_scene = get_current_scene()
+        previous_scene = get_current_scene()  # may be None
         set_scene(scene)
 
         for layer in tilemap.tmxdata.layers:

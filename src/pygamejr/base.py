@@ -10,27 +10,41 @@ screen = pygame.display.set_mode((window_width, window_height), pygame.RESIZABLE
 
 clock = pygame.time.Clock()
 
-_current_scene = None
+_global_scene = None    # always rendered on top
+_current_scene = None   # set by set_scene(), rendered below global
+
+
+def get_global_scene():
+    """Returns the global scene. Sprites added here are always visible regardless of current scene."""
+    global _global_scene
+    if _global_scene is None:
+        from .scene import Scene
+        _global_scene = Scene()
+    return _global_scene
+
 
 def get_current_scene():
-    global _current_scene
-    if _current_scene is None:
-        from .scene import Scene
-        _current_scene = Scene()
+    """Returns the current scene set by set_scene(), or None if not set."""
     return _current_scene
+
 
 def set_scene(scene) -> None:
     global _current_scene
     _current_scene = scene
 
+
 def next_frame():
-    scene = get_current_scene()
     screen.fill("black")
-    scene.update()
-    scene.draw()
+    if _current_scene is not None:
+        _current_scene.update()
+        _current_scene.draw()
+    global_scene = get_global_scene()
+    global_scene.update()
+    global_scene.draw()
     pygame.display.flip()
     clock.tick(60)
     return not is_quit()
+
 
 def every_frame(frame_count=0, draw_sprites_rect=False):
     running = True
@@ -48,13 +62,19 @@ def every_frame(frame_count=0, draw_sprites_rect=False):
 
         yield dt
 
-        scene = get_current_scene()
-        scene.update()
-        scene.draw(draw_rect=draw_sprites_rect)
+        if _current_scene is not None:
+            _current_scene.update()
+            _current_scene.draw(draw_rect=draw_sprites_rect)
+
+        global_scene = get_global_scene()
+        global_scene.update()
+        global_scene.draw(draw_rect=draw_sprites_rect)
 
         pygame.display.flip()
 
+
 _is_quit = False
+
 
 def is_quit():
     global _is_quit
