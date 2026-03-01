@@ -53,9 +53,6 @@ class LevelScene(pygamejr.Scene):
         self.enemies = pygame.sprite.Group()
         self.coins = pygame.sprite.Group()
 
-        # Coins (static)
-        self._create_coins()
-
     def _create_coins(self):
         for pos in self._COIN_POSITIONS:
             coin = pygamejr.ImageSprite(pygamejr.resources.image.coin_gold, scene=self)
