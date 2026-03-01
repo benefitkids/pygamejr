@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "map2.tmx",
+    "activeFile": "map_loop_nested2.tmx",
     "expandedProjectPaths": [
         "."
     ],
@@ -76,7 +76,7 @@
             "scale": 1.34150390625,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 172.940234403436,
+                "x": 255.683191380942,
                 "y": 256.05590740336316
             }
         },
@@ -146,7 +146,7 @@
         },
         "map_loop_nested2.tmx": {
             "scale": 1.34150390625,
-            "selectedLayer": 2,
+            "selectedLayer": 1,
             "viewCenter": {
                 "x": 255.683191380942,
                 "y": 352.2166411880323
@@ -179,13 +179,13 @@
     "property.type": "string",
     "recentFiles": [
         "sokoban_tilesheet.tsx",
+        "map2.tmx",
+        "map3.tmx",
+        "map4.tmx",
+        "map5.tmx",
         "map6.tmx",
         "map10.tmx",
         "map_loop_nested2.tmx",
-        "map5.tmx",
-        "map4.tmx",
-        "map3.tmx",
-        "map2.tmx",
         "map_loop4.tmx",
         "map_loop5.tmx",
         "map_loop6.tmx",

@@ -14,22 +14,22 @@ class SubtitlesSprite(TextSprite):
                  sprite_angle: float = 0,
                  *args):
         super().__init__(text_list[0], size, color, font_name, sprite_angle, *args)
-        self.is_visible = False
         self._text_list = text_list
         self._text_index = 0
         self._last_update = time.time()
+        self.visible = 0
 
     @property
-    def is_visible(self):
-        return self._is_visible
+    def visible(self):
+        return super().visible
 
-    @is_visible.setter
-    def is_visible(self, value):
-        if value != self._is_visible:
-            self._is_visible = value
-            if value:
-                self._last_update = time.time()
-                self._render_text()
+    @visible.setter
+    def visible(self, value):
+        old = super().visible
+        pygame.sprite.DirtySprite.visible.fset(self, value)
+        if value and not old:
+            self._last_update = time.time()
+            self._render_text()
 
     @property
     def text(self):
@@ -42,7 +42,7 @@ class SubtitlesSprite(TextSprite):
             self._render_text()
 
     def update(self):
-        if not self.is_visible:
+        if not self.visible:
             return
 
         current_time = time.time()
@@ -50,7 +50,7 @@ class SubtitlesSprite(TextSprite):
             print(self._text_index, len(self._text_list))
             if self._text_index >= len(self._text_list) - 1:
                 self._text_index = 0
-                self.is_visible = False
+                self.visible = 0
             else:
                 self._text_index += 1
                 self.text = self._text_list[self._text_index]

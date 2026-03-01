@@ -1,4 +1,4 @@
-from pygame.sprite import Sprite as PygameSprite, AbstractGroup, Group
+from pygame.sprite import Sprite as PygameSprite, AbstractGroup, LayeredUpdates
 from .tilemap import TileMap
 
 DEFAULT_LAYER = "default"
@@ -6,7 +6,7 @@ DEFAULT_LAYER = "default"
 class Scene:
     def __init__(self):
         self._name_mapping: dict[str, AbstractGroup] = {
-            DEFAULT_LAYER: Group()
+            DEFAULT_LAYER: LayeredUpdates()
         }
 
     @classmethod
@@ -20,7 +20,7 @@ class Scene:
         for layer in tilemap.tmxdata.layers:
             if hasattr(layer, 'tiles'):
                 sprites = tilemap.get_layer_sprites(layer.name)
-                scene.add_sprite_list(name=layer.name, sprite_list=Group(sprites))
+                scene.add_sprite_list(name=layer.name, sprite_list=LayeredUpdates(sprites))
 
         scene._name_mapping[DEFAULT_LAYER].empty()
         set_scene(previous_scene)

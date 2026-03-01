@@ -9,10 +9,10 @@ WIDTH = 500
 HEIGHT = 500
 
 
-class BaseSprite(pygame.sprite.Sprite):
-    def __init__(self, sprite_angle: float = 0, visible: bool = True, *args):
+class BaseSprite(pygame.sprite.DirtySprite):
+    def __init__(self, sprite_angle: float = 0, is_visible: bool = True, *args):
         super().__init__(*args)
-        self._is_visible = visible
+        super()._set_visible(1 if is_visible else 0)
         self._sprite_angle = sprite_angle
         self._angle = sprite_angle
         (get_current_scene() or get_global_scene()).add(self)
@@ -22,11 +22,11 @@ class BaseSprite(pygame.sprite.Sprite):
 
     @property
     def is_visible(self):
-        return self._is_visible
+        return bool(self.visible)
 
     @is_visible.setter
     def is_visible(self, value):
-        self._is_visible = value
+        self.visible = 1 if value else 0
 
     def draw(self, draw_rect: bool = False):
         if self.is_visible:
