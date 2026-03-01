@@ -214,7 +214,7 @@ for dt in pygamejr.every_frame():
             hud_status.is_visible = False
     elif current_scene in [level1_scene, level2_scene]:
         if keys[pygame.K_ESCAPE]:
-            pygamejr.set_scene()
+            pygamejr.set_scene(menu_scene)
         if current_scene.state == 'win':
             if current_scene == level1_scene:
                 pygamejr.set_scene(level2_scene)
