@@ -31,6 +31,8 @@ def get_current_scene():
 def set_scene(scene) -> None:
     global _current_scene
     _current_scene = scene
+    if scene is not None:
+        scene.init_scene()
 
 
 def next_frame():

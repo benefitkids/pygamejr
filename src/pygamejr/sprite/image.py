@@ -19,10 +19,11 @@ class ImageSprite(BaseSprite):
             self,
             filename: str | pathlib.Path = None,
             image: pygame.Surface = None,
-            sprite_angle: float = 0,
             crop_alpha: bool = True,
+            sprite_angle: float = 0,
+            scene=None,
             *args):
-        super().__init__(sprite_angle, *args)
+        super().__init__(sprite_angle, scene=scene, *args)
         if filename:
             self._original_image = pygame.image.load(filename).convert_alpha()
         else:

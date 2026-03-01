@@ -10,10 +10,16 @@ HEIGHT = 500
 
 
 class SubtitlesSprite(TextSprite):
-    def __init__(self, text_list: list[str] = [], size: int = 32, color=(255, 255, 255), font_name=None,
-                 sprite_angle: float = 0,
-                 *args):
-        super().__init__(text_list[0], size, color, font_name, sprite_angle, *args)
+    def __init__(
+            self,
+            text_list: list[str] = [],
+            size: int = 32,
+            color=(255, 255, 255),
+            font_name=None,
+            sprite_angle: float = 0,
+            scene=None,
+            *args):
+        super().__init__(text_list[0], size, color, font_name, sprite_angle, scene, *args)
         self._text_list = text_list
         self._text_index = 0
         self._last_update = time.time()

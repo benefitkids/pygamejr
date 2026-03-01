@@ -6,8 +6,10 @@ import pygamejr
 # Sprites created here are visible in every scene.
 # =================================================================
 
+score = 0
+
 player = pygamejr.ImageSprite(pygamejr.resources.image.player_ship1_orange)
-player.rect.center = (400, 500)
+player.rect.center = (400, 300)
 
 hud_score = pygamejr.TextSprite("Score: 0", size=24)
 hud_score.rect.topleft = (10, 10)
@@ -15,52 +17,61 @@ hud_score.rect.topleft = (10, 10)
 hud_level = pygamejr.TextSprite("Level 1", size=24)
 hud_level.rect.topright = (790, 10)
 
+hud_status = pygamejr.TextSprite("", size=48)
+hud_status.rect.center = (400, 420)
+hud_status.is_visible = False
+
 # =================================================================
 # SCENE CLASSES
 # =================================================================
 
 class MenuScene(pygamejr.Scene):
-    def __init__(self, player, hud_score, hud_level):
+    def __init__(self):
         super().__init__()
-        self.player = player
-        self.hud_score = hud_score
-        self.hud_level = hud_level
-        self.next_scene = None  # wired up after level scenes are created
         self._prev_space = False
 
-        previous = pygamejr.get_current_scene()
-        pygamejr.set_scene(self)
-        pygamejr.TextSprite("Space Shooter", size=56).rect.center = (400, 200)
-        pygamejr.TextSprite("SPACE - start game", size=30).rect.center = (400, 320)
-        pygamejr.set_scene(previous)
+        title1 = pygamejr.TextSprite("Space Shooter", size=56, scene=self)
+        title1.rect.center = (400, 200)
+        title2 = pygamejr.TextSprite("SPACE - start game", size=30, scene=self)
+        title2.rect.center = (400, 320)
 
     def update(self, dt=0):
         super().update(dt)
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_SPACE] and not self._prev_space and self.next_scene:
-            self.player.rect.center = (400, 500)
-            self.player.is_visible = True
-            self.hud_score.is_visible = True
-            self.hud_level.is_visible = True
-            self.hud_level.text = "Level 1"
-            pygamejr.set_scene(self.next_scene)
-        self._prev_space = keys[pygame.K_SPACE]
+
 
 
 class LevelScene(pygamejr.Scene):
-    """Base class for game levels. Handles player movement and ESC -> menu."""
+    """Base class for game levels. Handles movement, coin collection and enemy collision."""
     SPEED = 250
+    _COIN_POSITIONS = []
 
-    def __init__(self, player, hud_score, hud_level, score_ref):
+    def __init__(self, player):
         super().__init__()
         self.player = player
-        self.hud_score = hud_score
-        self.hud_level = hud_level
-        self.score_ref = score_ref
-        self.menu_scene = None  # wired up after all scenes are created
+        self.state = None
         self._prev_esc = False
+        self.enemies = pygame.sprite.Group()
+        self.coins = pygame.sprite.Group()
+
+        # Coins (static)
+        self._create_coins()
+
+    def _create_coins(self):
+        for pos in self._COIN_POSITIONS:
+            coin = pygamejr.ImageSprite(pygamejr.resources.image.coin_gold, scene=self)
+            coin.rect.center = pos
+            self.coins.add(coin)
+
+    def init_scene(self):
+        self.state = None
+        for coin in list(self.coins):
+            coin.kill()
+        self.coins.empty()
+        self._create_coins()
+        return super().init_scene()
 
     def update(self, dt=0):
+        global score
         super().update(dt)
         keys = pygame.key.get_pressed()
         p = self.player
@@ -74,106 +85,112 @@ class LevelScene(pygamejr.Scene):
             p.rect.y += self.SPEED * dt
         p.rect.clamp_ip(pygamejr.screen.get_rect())
 
-        if keys[pygame.K_ESCAPE] and not self._prev_esc:
-            self.player.is_visible = False
-            self.hud_score.is_visible = False
-            self.hud_level.is_visible = False
-            pygamejr.set_scene(self.menu_scene)
-        self._prev_esc = keys[pygame.K_ESCAPE]
+        if self.state or not self.player.is_visible:
+            return
+
+        # Coin collection
+        collected = pygame.sprite.spritecollide(
+            self.player, self.coins, True, pygame.sprite.collide_mask
+        )
+        if collected:
+            score += 10 * len(collected)
+            if not self.coins:
+                self.state = "win"
+                return
+
+        # Enemy collision → game over
+        if pygame.sprite.spritecollide(
+            self.player, self.enemies, False, pygame.sprite.collide_mask
+        ):
+            self.state = "game_over"
 
 
 class Level1Scene(LevelScene):
-    def __init__(self, player, hud_score, hud_level, score_ref):
-        super().__init__(player, hud_score, hud_level, score_ref)
-        self.next_scene = None  # wired up after level2_scene is created
-        self._prev_n = False
+    _COIN_POSITIONS = [(200, 250), (560, 180), (400, 430)]
 
-        previous = pygamejr.get_current_scene()
-        pygamejr.set_scene(self)
-        self.bee1 = pygamejr.ImageSprite(pygamejr.resources.image.bee)
+    def __init__(self, player):
+        super().__init__(player)
+
+        # Enemies (moving)
+        self.bee1 = pygamejr.ImageSprite(pygamejr.resources.image.bee, scene=self)
         self.bee1.rect.center = (150, 150)
-        self.bee2 = pygamejr.ImageSprite(pygamejr.resources.image.bee)
-        self.bee2.rect.center = (500, 100)
-        pygamejr.ImageSprite(pygamejr.resources.image.ladybug).rect.center = (650, 200)
-        pygamejr.TextSprite(
-            "ARROWS - move   |   N - next level   |   ESC - menu",
-            size=20
-        ).rect.midbottom = (400, 590)
-        pygamejr.set_scene(previous)
+        self.bee2 = pygamejr.ImageSprite(pygamejr.resources.image.bee, scene=self)
+        self.bee2.rect.center = (600, 220)
+        self.enemies.add(self.bee1, self.bee2)
+
+        title = pygamejr.TextSprite(
+            "ARROWS - move   |   собери монетки!   |   ESC - меню",
+            size=20,
+            scene=self
+        )
+        title.rect.midbottom = (400, 590)
 
     def update(self, dt=0):
-        super().update(dt)  # player movement + ESC
-        # Animate bees
+        super().update(dt)
+        # Animate enemies
         self.bee1.rect.x += 120 * dt
         self.bee2.rect.x -= 90 * dt
         if self.bee1.rect.left > pygamejr.screen.get_width():
             self.bee1.rect.right = 0
         if self.bee2.rect.right < 0:
             self.bee2.rect.left = pygamejr.screen.get_width()
-        # N -> next level
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_n] and not self._prev_n and self.next_scene:
-            self.score_ref[0] += 100
-            self.hud_score.text = f"Score: {self.score_ref[0]}"
-            self.hud_level.text = "Level 2"
-            pygamejr.set_scene(self.next_scene)
-        self._prev_n = keys[pygame.K_n]
+
+    def init_scene(self):
+        self.bee1.rect.center = (150, 150)
+        self.bee2.rect.center = (600, 220)
+        return super().init_scene()
 
 
 class Level2Scene(LevelScene):
-    def __init__(self, player, hud_score, hud_level, score_ref):
-        super().__init__(player, hud_score, hud_level, score_ref)
-        self.prev_scene = None  # wired up after level1_scene is created
-        self._prev_p = False
+    _COIN_POSITIONS = [(150, 350), (400, 200), (640, 420)]
 
-        previous = pygamejr.get_current_scene()
-        pygamejr.set_scene(self)
-        self.fly1 = pygamejr.ImageSprite(pygamejr.resources.image.fly)
+    def __init__(self, player):
+        super().__init__(player)
+
+        # Enemies (moving)
+        self.fly1 = pygamejr.ImageSprite(pygamejr.resources.image.fly, scene=self)
         self.fly1.rect.center = (180, 130)
-        self.fly2 = pygamejr.ImageSprite(pygamejr.resources.image.fly)
-        self.fly2.rect.center = (520, 160)
-        pygamejr.ImageSprite(pygamejr.resources.image.frog).rect.center = (340, 80)
-        pygamejr.ImageSprite(pygamejr.resources.image.worm_green).rect.center = (650, 200)
-        pygamejr.TextSprite(
-            "ARROWS - move   |   P - previous level   |   ESC - menu",
-            size=20
-        ).rect.midbottom = (400, 590)
-        pygamejr.set_scene(previous)
+        self.fly1_vel = [140, 110]
+        self.fly2 = pygamejr.ImageSprite(pygamejr.resources.image.fly, scene=self)
+        self.fly2.rect.center = (520, 340)
+        self.fly2_vel = [-100, -80]
+        self.enemies.add(self.fly1, self.fly2)
+
+        title = pygamejr.TextSprite(
+            "ARROWS - move   |   собери монетки!   |   ESC - меню",
+            size=20,
+            scene=self,
+        )
+        title.rect.midbottom = (400, 590)
 
     def update(self, dt=0):
-        super().update(dt)  # player movement + ESC
-        # Animate flies
-        self.fly1.rect.x += 140 * dt
-        self.fly2.rect.x -= 100 * dt
-        if self.fly1.rect.left > pygamejr.screen.get_width():
-            self.fly1.rect.right = 0
-        if self.fly2.rect.right < 0:
-            self.fly2.rect.left = pygamejr.screen.get_width()
-        # P -> previous level
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_p] and not self._prev_p and self.prev_scene:
-            self.score_ref[0] += 100
-            self.hud_score.text = f"Score: {self.score_ref[0]}"
-            self.hud_level.text = "Level 1"
-            pygamejr.set_scene(self.prev_scene)
-        self._prev_p = keys[pygame.K_p]
+        super().update(dt)
+        screen_rect = pygamejr.screen.get_rect()
+        # Animate enemies with bounce
+        for fly, vel in [(self.fly1, self.fly1_vel), (self.fly2, self.fly2_vel)]:
+            fly.rect.x += vel[0] * dt
+            fly.rect.y += vel[1] * dt
+            if fly.rect.left < screen_rect.left or fly.rect.right > screen_rect.right:
+                vel[0] *= -1
+                fly.rect.clamp_ip(screen_rect)
+            if fly.rect.top < screen_rect.top or fly.rect.bottom > screen_rect.bottom:
+                vel[1] *= -1
+                fly.rect.clamp_ip(screen_rect)
 
+    def init_scene(self):
+        self.fly1.rect.center = (180, 130)
+        self.fly1_vel = [140, 110]
+        self.fly2.rect.center = (520, 340)
+        self.fly2_vel = [-100, -80]
+        return super().init_scene()
 
 # =================================================================
-# CREATE AND WIRE UP SCENES
+# CREATE SCENES
 # =================================================================
 
-score_ref = [0]
-
-menu_scene   = MenuScene(player, hud_score, hud_level)
-level1_scene = Level1Scene(player, hud_score, hud_level, score_ref)
-level2_scene = Level2Scene(player, hud_score, hud_level, score_ref)
-
-menu_scene.next_scene    = level1_scene
-level1_scene.next_scene  = level2_scene
-level1_scene.menu_scene  = menu_scene
-level2_scene.prev_scene  = level1_scene
-level2_scene.menu_scene  = menu_scene
+menu_scene   = MenuScene()
+level1_scene = Level1Scene(player)
+level2_scene = Level2Scene(player)
 
 # =================================================================
 # START — player and HUD hidden until game begins
@@ -185,4 +202,36 @@ hud_score.is_visible = False
 hud_level.is_visible = False
 
 for dt in pygamejr.every_frame():
-    pass
+
+    hud_score.text = f"Score: {score}"
+    keys = pygame.key.get_pressed()
+
+    current_scene = pygamejr.get_current_scene()
+
+    if current_scene == menu_scene:
+        if keys[pygame.K_SPACE]:
+            pygamejr.set_scene(level1_scene)
+            player.is_visible = True
+            hud_score.is_visible = True
+            hud_level.is_visible = True
+            hud_status.is_visible = False
+    elif current_scene in [level1_scene, level2_scene]:
+        if keys[pygame.K_ESCAPE]:
+            pygamejr.set_scene()
+        if current_scene.state == 'win':
+            if current_scene == level1_scene:
+                pygamejr.set_scene(level2_scene)
+                hud_level.text = 'Level 2'
+            elif current_scene == level2_scene:
+                player.is_visible = False
+                hud_score.is_visible = False
+                hud_level.is_visible = False
+                hud_status.text = f"YOU WIN! {score} pts"
+                hud_status.is_visible = True
+                pygamejr.set_scene(None)
+                pygamejr.set_scene(menu_scene)
+        elif current_scene.state == 'game_over':
+            hud_status.text = "GAME OVER"
+            hud_status.is_visible = True
+            player.is_visible = False
+            pygamejr.set_scene(menu_scene)

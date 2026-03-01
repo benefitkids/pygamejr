@@ -9,9 +9,16 @@ HEIGHT = 500
 
 
 class TextSprite(BaseSprite):
-    def __init__(self, text: str='', size: int = 32, color=(255, 255, 255), font_name=None, sprite_angle: float = 0,
-                 *args):
-        super().__init__(sprite_angle, *args)
+    def __init__(
+            self,
+            text: str='',
+            size: int = 32,
+            color=(255, 255, 255),
+            font_name=None,
+            sprite_angle: float = 0,
+            scene=None,
+            *args):
+        super().__init__(sprite_angle, scene=scene, *args)
         self._text = text
         self._size = size
         self._color = color

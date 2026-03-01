@@ -8,6 +8,7 @@ class Scene:
         self._name_mapping: dict[str, AbstractGroup] = {
             DEFAULT_LAYER: LayeredUpdates()
         }
+        self.pending_transition: str | None = None
 
     @classmethod
     def from_tilemap(cls, tilemap: TileMap) -> "Scene":
@@ -37,6 +38,10 @@ class Scene:
 
     def get_sprite_list(self, name: str) -> AbstractGroup | None:
         return self._name_mapping.get(name)
+
+    def init_scene(self) -> None:
+        """Called when this scene becomes the active scene. Override to add initialization logic."""
+        pass
 
     def update(self, dt: float = 0) -> None:
         for sprite_list in self._name_mapping.values():

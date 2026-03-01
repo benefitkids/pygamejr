@@ -10,12 +10,12 @@ HEIGHT = 500
 
 
 class BaseSprite(pygame.sprite.DirtySprite):
-    def __init__(self, sprite_angle: float = 0, is_visible: bool = True, *args):
+    def __init__(self, sprite_angle: float = 0, is_visible: bool = True, scene=None, *args):
         super().__init__(*args)
         super()._set_visible(1 if is_visible else 0)
         self._sprite_angle = sprite_angle
         self._angle = sprite_angle
-        (get_current_scene() or get_global_scene()).add(self)
+        (scene or get_current_scene() or get_global_scene()).add(self)
 
     def __del__(self):
         self.kill()
