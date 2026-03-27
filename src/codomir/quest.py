@@ -124,6 +124,38 @@ class Player(BaseSprite):
         tile_x, tile_y = _get_spawn_position()
         self.set_position_by_tile(tile_x, tile_y)
         self._is_end = False
+        self._is_win_state = False
+        self._is_game_over_state = False
+        self._on_complete = None
+        pygamejr.next_frame()
+
+    @property
+    def is_finished(self):
+        return self._is_end
+
+    @property
+    def is_win(self):
+        return self._is_win_state
+
+    @property
+    def is_game_over(self):
+        return self._is_game_over_state
+
+    @property
+    def on_complete(self):
+        return self._on_complete
+
+    @on_complete.setter
+    def on_complete(self, callback):
+        self._on_complete = callback
+
+    def reset(self):
+        self._is_end = False
+        self._is_win_state = False
+        self._is_game_over_state = False
+        self._direction = Direction.RIGHT
+        self.set_position_by_tile(*_get_spawn_position())
+        self._update_image()
         pygamejr.next_frame()
 
     def set_position_by_tile(self, x, y):
@@ -192,6 +224,9 @@ class Player(BaseSprite):
         if self._is_wall(tile_x, tile_y):
             self._animate_game_over(dx, dy)
             self._is_end = True
+            self._is_game_over_state = True
+            if self._on_complete:
+                self._on_complete(False)
             return
 
         character_tiles_count = len(self.images)
@@ -206,6 +241,9 @@ class Player(BaseSprite):
         if self._is_win(tile_x, tile_y):
             self._animate_win()
             self._is_end = True
+            self._is_win_state = True
+            if self._on_complete:
+                self._on_complete(True)
 
         self._tile_x = tile_x
         self._tile_y = tile_y
@@ -220,17 +258,22 @@ class Player(BaseSprite):
         old_x = self.rect.x
         old_y = self.rect.y
         max_delta = TILE_SIZE / 5
-        delta = 0
-        # Scene draws each frame automatically.
-        for dt in pygamejr.every_frame():
-            if delta > max_delta:
-                self.rect.x = old_x
-                self.rect.y = old_y
-                delta = 0
-            else:
-                self.rect.x += dx
-                self.rect.y += dy
-                delta += 1
+        # Finite shake animation: 5 cycles.
+        for _ in range(5):
+            if pygamejr.is_quit():
+                break
+            delta = 0
+            for dt in pygamejr.every_frame(int(max_delta) * 2):
+                if delta > max_delta:
+                    self.rect.x = old_x
+                    self.rect.y = old_y
+                    delta = 0
+                else:
+                    self.rect.x += dx
+                    self.rect.y += dy
+                    delta += 1
+        self.rect.x = old_x
+        self.rect.y = old_y
 
     def _scale_surface(self, surf, scale: float):
         width = round(surf.get_width() * scale)
@@ -278,6 +321,9 @@ def set_map(map):
 
     player.set_position_by_tile(*_get_spawn_position())
     player._update_image()
+    player._is_end = False
+    player._is_win_state = False
+    player._is_game_over_state = False
     win_position = _get_win_position()
 
 
