@@ -84,10 +84,9 @@ def is_quit():
     if _is_quit:
         return True
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            _is_quit = True
-            return True
+    if pygame.event.get(pygame.QUIT):
+        _is_quit = True
+        return True
     return False
 
 
