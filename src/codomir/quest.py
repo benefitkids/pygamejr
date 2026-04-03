@@ -118,7 +118,7 @@ win_position = _get_win_position()
 class Player(BaseSprite):
     def __init__(self, *args):
         super().__init__(*args)
-        self._direction = Direction.RIGHT
+        self._direction: Direction = Direction.RIGHT
         self._update_image()
         self.rect = self.image.get_rect()
         tile_x, tile_y = _get_spawn_position()
@@ -325,6 +325,7 @@ def set_map(map):
     player._is_win_state = False
     player._is_game_over_state = False
     win_position = _get_win_position()
+    pygamejr.next_frame()
 
 
 def init(src):
