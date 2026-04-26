@@ -11,7 +11,7 @@ This is a **library + demo scripts** repository. There is no app server, no data
 - `src/pygamejr/` — core engine (sprites, scenes, game loop) on top of `pygame-ce`.
 - `src/codomir/` — quest/map layer built on top of `pygamejr`.
 - `demo/` — runnable example scripts; each script runs a **blocking** `pygame` window loop until the window is closed.
-- No automated tests exist. "Testing" means: run a demo (or a small repro script) headless, and capture a screenshot or assert on internal state.
+- `tests/` — `pytest` suite covering both libraries. Run it with `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy pytest`. The codomir tests spawn fresh subprocesses because importing `codomir` mutates global state.
 
 **Critical import-time side effects** — know these before you write any test script:
 
