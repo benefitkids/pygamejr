@@ -6,7 +6,9 @@ from .sprite.text import TextSprite
 from .sprite.subtitles import SubtitlesSprite
 from .tilemap import TileMap
 from .scene import Scene
+from .touch import Joystick, show_joystick, ActionButton, show_action_button
 from . import resources
+from . import key
 
 __all__ = [
     every_frame,
@@ -22,5 +24,10 @@ __all__ = [
     RectSprite,
     TileMap,
     Scene,
+    Joystick,
+    show_joystick,
+    ActionButton,
+    show_action_button,
+    key,
     resources,
 ]

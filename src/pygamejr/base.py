@@ -13,6 +13,23 @@ clock = pygame.time.Clock()
 _global_scene = None    # always rendered on top
 _current_scene = None   # set by set_scene(), rendered below global
 
+_input_update_callbacks: list = []
+
+
+def _add_input_update_callback(cb) -> None:
+    if cb not in _input_update_callbacks:
+        _input_update_callbacks.append(cb)
+
+
+def _remove_input_update_callback(cb) -> None:
+    if cb in _input_update_callbacks:
+        _input_update_callbacks.remove(cb)
+
+
+def _run_input_update_callbacks(dt: float) -> None:
+    for cb in _input_update_callbacks:
+        cb(dt)
+
 
 def get_global_scene():
     """Returns the global scene. Sprites added here are always visible regardless of current scene."""
@@ -38,6 +55,7 @@ def set_scene(scene) -> None:
 def next_frame():
     dt = clock.tick(60) / 1000
     screen.fill("black")
+    _run_input_update_callbacks(dt)
     if _current_scene is not None:
         _current_scene.update(dt)
         _current_scene.draw()
@@ -61,6 +79,8 @@ def every_frame(frame_count=0, draw_sprites_rect=False):
             frame += 1
 
         screen.fill("black")
+
+        _run_input_update_callbacks(dt)
 
         yield dt
 
