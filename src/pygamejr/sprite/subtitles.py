@@ -47,7 +47,7 @@ class SubtitlesSprite(TextSprite):
             self._text = value
             self._render_text()
 
-    def update(self):
+    def update(self, dt=None):
         if not self.visible:
             return
 

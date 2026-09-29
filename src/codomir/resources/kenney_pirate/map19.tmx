@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="8" height="8" tilewidth="64" tileheight="64" infinite="0" nextlayerid="6" nextobjectid="1">
+ <properties>
+  <property name="character_bottom" value="[[16,0]]" />
+  <property name="character_left" value="[[16,3]]" />
+  <property name="character_right" value="[[16,2]]" />
+  <property name="character_top" value="[[16,1]]" />
+ </properties>
+ <tileset firstgid="1" source="tiles_sheet.tsx" />
+ <layer id="4" name="background" width="8" height="8">
+  <data encoding="csv">
+77,77,77,77,77,77,77,77,
+77,77,77,77,77,77,77,77,
+77,77,77,77,77,77,77,77,
+77,77,77,77,77,77,77,77,
+77,77,77,77,77,77,77,77,
+77,77,77,77,77,77,77,77,
+77,77,77,77,77,77,77,77,
+77,77,77,77,77,77,77,77
+</data>
+ </layer>
+ <layer id="1" name="walls" width="8" height="8">
+  <data encoding="csv">
+38,58,58,42,58,58,58,39,
+43,0,0,54,0,0,0,23,
+43,0,54,0,0,54,0,23,
+43,0,0,0,54,60,0,23,
+25,52,53,54,0,0,0,23,
+43,0,0,0,53,0,52,24,
+43,0,52,0,0,0,0,23,
+55,7,41,7,7,7,7,56
+</data>
+ </layer>
+ <layer id="5" name="foreground" width="8" height="8">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="3" name="objects" width="8" height="8">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,
+0,0,85,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,102,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0
+</data>
+ </layer>
+</map>

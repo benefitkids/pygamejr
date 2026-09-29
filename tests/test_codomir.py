@@ -8,11 +8,77 @@ hermetic, every scenario runs in a fresh Python subprocess that monkey-patches
 the slow animations to no-ops.
 """
 import os
+from pathlib import Path
 import subprocess
 import sys
 import textwrap
 
 import pytest
+
+
+@pytest.mark.parametrize("number", range(7, 21))
+def test_new_linear_map_solution_reaches_goal(number):
+    """Catch missing resources, blocked routes and incorrect demo commands."""
+    demo = Path(__file__).resolve().parents[1] / "demo" / "codomir" / f"map{number}.py"
+    result = _run(
+        f"""
+        import ast
+        import runpy
+        from pathlib import Path
+        import pygamejr
+
+        set_map(getattr(maps.linear, "map{number}"))
+        # Keep all movement updates, but skip frame delays and the demo window loop.
+        pygamejr.every_frame = lambda count: iter([0] * count)
+        pygamejr.next_frame = lambda: None
+        codomir.wait_quit = lambda: None
+
+        source = Path({str(demo)!r}).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        assert all(isinstance(node, (ast.ImportFrom, ast.Expr)) for node in tree.body), \
+            "The learner's solution must contain only sequential commands"
+        runpy.run_path({str(demo)!r})
+        assert player.is_finished and player.is_win
+        assert not player.is_game_over
+        print("ok")
+        """
+    )
+    assert result.returncode == 0, result.stderr
+    assert "ok" in result.stdout
+
+
+@pytest.mark.parametrize("number", range(7, 21))
+def test_new_loop_map_solution_reaches_goal_without_nested_loops(number):
+    demo = Path(__file__).resolve().parents[1] / "demo" / "codomir" / "loop" / f"map{number}.py"
+    result = _run(
+        f"""
+        import ast
+        import runpy
+        from pathlib import Path
+        import pygamejr
+
+        set_map(getattr(maps.loop, "map{number}"))
+        pygamejr.every_frame = lambda count: iter([0] * count)
+        pygamejr.next_frame = lambda: None
+        codomir.wait_quit = lambda: None
+
+        tree = ast.parse(Path({str(demo)!r}).read_text(encoding="utf-8"))
+        loops = [node for node in tree.body if isinstance(node, ast.For)]
+        assert loops, "The solution must practice for loops"
+        assert all(isinstance(node, (ast.ImportFrom, ast.Expr, ast.For)) for node in tree.body)
+        for loop in loops:
+            assert all(isinstance(node, ast.Expr) for node in loop.body), "No nested loops or conditions"
+            assert not loop.orelse
+            assert isinstance(loop.iter, ast.Call)
+            assert isinstance(loop.iter.func, ast.Name) and loop.iter.func.id == "range"
+        runpy.run_path({str(demo)!r})
+        assert player.is_finished and player.is_win
+        assert not player.is_game_over
+        print("ok")
+        """
+    )
+    assert result.returncode == 0, result.stderr
+    assert "ok" in result.stdout
 
 
 def _run(snippet: str, timeout: int = 60) -> subprocess.CompletedProcess:
