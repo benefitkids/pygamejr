@@ -81,6 +81,94 @@ def test_new_loop_map_solution_reaches_goal_without_nested_loops(number):
     assert "ok" in result.stdout
 
 
+@pytest.mark.parametrize("number", range(1, 23))
+def test_nested_map_solution_and_geometry(number):
+    """Every example fits the window and follows an unambiguous nested route."""
+    demo = Path(__file__).resolve().parents[1] / "demo" / "codomir" / "nested_loop" / f"map{number}.py"
+    result = _run(
+        f"""
+        import ast
+        import runpy
+        from pathlib import Path
+        import pygamejr
+        import codomir.quest as quest
+
+        source = Path({str(demo)!r}).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+
+        def check_body(body, depth=0):
+            deepest = depth
+            for node in body:
+                assert isinstance(node, (ast.ImportFrom, ast.Expr, ast.For))
+                if isinstance(node, ast.For):
+                    assert not node.orelse
+                    assert isinstance(node.target, ast.Name)
+                    assert node.target.id == ('i', 'j', 'k')[depth]
+                    assert isinstance(node.iter, ast.Call)
+                    assert isinstance(node.iter.func, ast.Name)
+                    assert node.iter.func.id == 'range'
+                    deepest = max(deepest, check_body(node.body, depth + 1))
+                elif isinstance(node, ast.Expr):
+                    assert isinstance(node.value, ast.Call)
+                    func = node.value.func
+                    if isinstance(func, ast.Attribute):
+                        assert isinstance(func.value, ast.Name) and func.value.id == 'player'
+                        assert func.attr in ('move_forward', 'turn_left', 'turn_right')
+                        assert not node.value.args and not node.value.keywords
+                    else:
+                        assert isinstance(func, ast.Name)
+                        assert func.id in ('set_map', 'wait_quit')
+            return deepest
+
+        assert check_body(tree.body) == {3 if number >= 21 else 2}
+        if {number} >= 21:
+            for node in ast.walk(tree):
+                if isinstance(node, ast.For):
+                    assert all(isinstance(arg, ast.Constant) for arg in node.iter.args)
+                    assert len(range(*(arg.value for arg in node.iter.args))) >= 2
+
+        pygamejr.every_frame = lambda count: iter([0] * count)
+        pygamejr.next_frame = lambda: None
+        codomir.wait_quit = lambda: None
+        set_map(getattr(maps.nested_loops, 'map{number}'))
+        tm = quest.tilemap.tmxdata
+        assert (tm.width, tm.height, tm.tilewidth, tm.tileheight) == (8, 8, 64, 64)
+        assert pygamejr.screen.get_size() == (512, 512)
+        walls = tm.layernames['walls'].data
+        for kind in ('Spawn', 'Win'):
+            positions = [(x, y) for x, y, gid in tm.layernames['objects']
+                         if gid and tm.tile_properties[gid].get('type') == kind]
+            assert len(positions) == 1, (kind, positions)
+            x, y = positions[0]
+            assert not walls[y][x]
+
+        path = [(player._tile_x, player._tile_y)]
+        move = player._move_to
+        def checked_move(x, y):
+            assert not player.is_finished, 'Extra move after reaching the finish'
+            assert 0 <= x < tm.width and 0 <= y < tm.height, (x, y)
+            assert not walls[y][x], (x, y)
+            move(x, y)
+            path.append((x, y))
+        player._move_to = checked_move
+
+        runpy.run_path({str(demo)!r})
+        assert player.is_win and not player.is_game_over
+        assert path[-1] == quest.win_position
+        assert len(path) == len(set(path)), 'Route crosses itself'
+        for a, (x, y) in enumerate(path):
+            for b in range(a + 2, len(path)):
+                bx, by = path[b]
+                assert abs(x - bx) + abs(y - by) != 1, 'Route has a shortcut'
+        free = {{(x, y) for y, row in enumerate(walls) for x, gid in enumerate(row) if not gid}}
+        assert free == set(path), 'Unexplained open cells outside the route'
+        print('ok')
+        """
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "ok" in result.stdout
+
+
 def _run(snippet: str, timeout: int = 60) -> subprocess.CompletedProcess:
     """Run a Python snippet in a fresh subprocess with SDL dummy drivers.
 
