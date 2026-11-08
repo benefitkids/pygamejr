@@ -292,17 +292,41 @@ class Player(BaseSprite):
         self._direction = Direction.LEFT
         self._move_to(self._tile_x - 1, self._tile_y)
 
-    def is_box_ahead(self) -> bool:
-        """Read whether the adjacent cell contains a box, even after completion."""
-        dx, dy = {
+    def _direction_step(self):
+        return {
             Direction.TOP: (0, -1),
             Direction.RIGHT: (1, 0),
             Direction.BOTTOM: (0, 1),
             Direction.LEFT: (-1, 0),
         }[self._direction]
+
+    def is_box_ahead(self) -> bool:
+        """Read whether the adjacent cell contains a box, even after completion."""
+        dx, dy = self._direction_step()
         tile_x, tile_y = self._tile_x + dx, self._tile_y + dy
         return (self._is_inside_map(tile_x, tile_y)
                 and (tile_x, tile_y) in quest_scene.box_positions)
+
+    def push(self) -> None:
+        """Push one adjacent box, or lose without moving either participant."""
+        if self._is_end:
+            return
+
+        dx, dy = self._direction_step()
+        source = (self._tile_x + dx, self._tile_y + dy)
+        destination = (source[0] + dx, source[1] + dy)
+        if (self._is_wall(*source)
+                or source not in quest_scene.box_positions
+                or self._is_wall(*destination)
+                or destination in quest_scene.box_positions):
+            self._animate_game_over(dx, dy)
+            self._is_end = True
+            self._is_game_over_state = True
+            if self._on_complete:
+                self._on_complete(False)
+            return
+
+        self._animate_move(*source, box_source=source)
 
     def move_forward(self):
         if self._direction == Direction.TOP:
@@ -329,24 +353,35 @@ class Player(BaseSprite):
                 self._on_complete(False)
             return
 
+        self._animate_move(tile_x, tile_y)
+
+    def _animate_move(self, tile_x: int, tile_y: int, box_source=None):
+        dx = tile_x - self._tile_x
+        dy = tile_y - self._tile_y
+        start_x, start_y = self.rect.topleft
+        box = quest_scene.box_sprites[box_source] if box_source is not None else None
+        if box is not None:
+            box_x, box_y = box.rect.topleft
         character_tiles_count = len(self.images)
         # Scene draws each frame automatically after the yield in every_frame().
         for i, dt in enumerate(pygamejr.every_frame(TILE_SIZE)):
-            self.rect.x += dx
-            self.rect.y += dy
+            progress = min(i + 1, TILE_SIZE)
+            self.rect.topleft = (start_x + dx * progress, start_y + dy * progress)
+            if box is not None:
+                box.rect.topleft = (box_x + dx * progress, box_y + dy * progress)
             self.image = self.images[int((i // (TILE_SIZE / 6)) % character_tiles_count)]
 
         self.image = self.images[0]
+        self.set_position_by_tile(tile_x, tile_y)
+        if box is not None:
+            quest_scene._move_box(box_source, (box_source[0] + dx, box_source[1] + dy))
 
         if self._is_win(tile_x, tile_y):
-            self._animate_win()
             self._is_end = True
             self._is_win_state = True
+            self._animate_win()
             if self._on_complete:
                 self._on_complete(True)
-
-        self._tile_x = tile_x
-        self._tile_y = tile_y
 
     def _is_inside_map(self, tile_x: int, tile_y: int) -> bool:
         return 0 <= tile_x < tilemap.tmxdata.width and 0 <= tile_y < tilemap.tmxdata.height
