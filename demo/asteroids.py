@@ -1,6 +1,7 @@
 """Игра из урока docs/lessons/pygamejr-classes-asteroids.md.
 
-Стрелки и WASD — движение, пробел — стрельба.
+W/S — вперёд/назад, A/D — поворот.
+Пробел — стрельба.
 Запуск из корня проекта: python demo/asteroids.py
 """
 
@@ -8,7 +9,6 @@ import random
 
 import pygame
 import pygamejr
-from pygamejr.sprite.base import BaseSprite
 
 
 # Формы: BrickSigma/Asteroids-pygame, Asteroids/assets/sprites.py.
@@ -19,65 +19,42 @@ METEOR_SHAPES = [
 ]
 
 
-class Player(BaseSprite):
+class Player(pygamejr.ImageSprite):
     def __init__(self, x, y):
-        super().__init__()
-        self.rect = pygame.FRect(0, 0, 44, 48)
+        # Рисуем корабль носом вниз: это направление move_forward() при угле 0.
+        image = pygame.Surface((46, 50), pygame.SRCALPHA)
+        points = [(23, 48), (1, 2), (23, 14), (45, 2)]
+        pygame.draw.lines(image, "white", True, points, 2)
+        super().__init__(image=image, sprite_angle=180)
         self.rect.center = (x, y)
-        self.speed = 300
+        self.speed = 150
+        self.rotation_speed = 180
 
     def update(self, dt=0):
         keys = pygame.key.get_pressed()
-        dx = 0
-        dy = 0
-
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            dx += 1
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            dx -= 1
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            dy += 1
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            dy -= 1
-
-        length = (dx ** 2 + dy ** 2) ** 0.5
-        if length > 0:
-            dx /= length
-            dy /= length
-
-        self.rect.x += dx * self.speed * dt
-        self.rect.y += dy * self.speed * dt
+        if keys[pygame.K_a]:
+            self.rotate(self.rotation_speed * dt)
+        if keys[pygame.K_d]:
+            self.rotate(-self.rotation_speed * dt)
+        if keys[pygame.K_w]:
+            self.move_forward(self.speed * dt)
+        if keys[pygame.K_s]:
+            self.move_forward(-self.speed * dt)
         self.rect.clamp_ip(pygamejr.screen.get_frect())
 
-    def draw(self, draw_rect=False):
-        if not self.is_visible:
-            return
 
-        x, y = self.rect.topleft
-        points = [
-            (x + 22, y),
-            (x, y + 46),
-            (x + 22, y + 34),
-            (x + 44, y + 46),
-        ]
-        pygame.draw.lines(pygamejr.screen, "white", True, points, 2)
-
-        if draw_rect:
-            pygame.draw.rect(pygamejr.screen, "red", self.rect, 1)
-
-
-class Meteor(BaseSprite):
+class Meteor(pygamejr.ImageSprite):
     def __init__(self, x, y):
-        super().__init__()
-        self.rect = pygame.FRect(0, 0, 50, 50)
+        image = pygame.Surface((50, 50), pygame.SRCALPHA)
+        shape = random.choice(METEOR_SHAPES)
+        points = []
+        for point_x, point_y in shape:
+            points.append((point_x * 0.6 + 1, point_y * 0.6 + 1))
+        pygame.draw.lines(image, "white", True, points, 2)
+        super().__init__(image=image)
         self.rect.center = (x, y)
         self.speed_x = random.uniform(-70, 70)
         self.speed_y = random.uniform(50, 100)
-
-        shape = random.choice(METEOR_SHAPES)
-        self.points = []
-        for point_x, point_y in shape:
-            self.points.append((point_x * 0.6 + 1, point_y * 0.6 + 1))
 
     def update(self, dt=0):
         self.rect.x += self.speed_x * dt
@@ -93,45 +70,20 @@ class Meteor(BaseSprite):
         elif self.rect.right < 0:
             self.rect.left = width
 
-    def draw(self, draw_rect=False):
-        if not self.is_visible:
-            return
 
-        points = []
-        for point_x, point_y in self.points:
-            points.append((self.rect.x + point_x, self.rect.y + point_y))
-        pygame.draw.lines(pygamejr.screen, "white", True, points, 2)
-
-        if draw_rect:
-            pygame.draw.rect(pygamejr.screen, "red", self.rect, 1)
-
-
-class Bullet(BaseSprite):
-    def __init__(self, x, y):
-        super().__init__()
-        self.rect = pygame.FRect(0, 0, 4, 12)
-        self.rect.midbottom = (x, y)
+class Bullet(pygamejr.ImageSprite):
+    def __init__(self, x, y, angle):
+        image = pygame.Surface((4, 12), pygame.SRCALPHA)
+        pygame.draw.line(image, "yellow", (2, 0), (2, 11), 3)
+        super().__init__(image=image, sprite_angle=angle)
+        self.rect.center = (x, y)
         self.speed = 500
+        self.move_forward(30)  # Переносим пулю из центра корабля к носу.
 
     def update(self, dt=0):
-        self.rect.y -= self.speed * dt
-        if self.rect.bottom < 0:
+        self.move_forward(self.speed * dt)
+        if not self.rect.colliderect(pygamejr.screen.get_frect()):
             self.kill()
-
-    def draw(self, draw_rect=False):
-        if not self.is_visible:
-            return
-
-        pygame.draw.line(
-            pygamejr.screen,
-            "yellow",
-            self.rect.midtop,
-            self.rect.midbottom,
-            3,
-        )
-
-        if draw_rect:
-            pygame.draw.rect(pygamejr.screen, "red", self.rect, 1)
 
 
 player = Player(
@@ -158,7 +110,7 @@ for dt in pygamejr.every_frame():
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_SPACE] and cooldown == 0:
-        bullet = Bullet(player.rect.centerx, player.rect.top)
+        bullet = Bullet(player.rect.centerx, player.rect.centery, player.angle)
         bullets.append(bullet)
         cooldown = reload_time
 

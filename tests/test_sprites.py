@@ -120,6 +120,22 @@ def test_base_sprite_rotate_wraps_at_360(isolated_scene):
     assert sprite._angle == 10
 
 
+def test_base_sprite_angle_tracks_rotation(isolated_scene):
+    sprite = BaseSprite(sprite_angle=180)
+    assert sprite.angle == 180
+    sprite.rotate(200)
+    assert sprite.angle == 20
+    sprite.rotate(-45)
+    assert sprite.angle == 335
+
+
+def test_base_sprite_angle_is_read_only(isolated_scene):
+    sprite = BaseSprite(sprite_angle=30)
+    with pytest.raises(AttributeError):
+        sprite.angle = 90
+    assert sprite.angle == 30
+
+
 def test_base_sprite_added_to_global_when_no_current_scene():
     previous = pygamejr.get_current_scene()
     pygamejr.set_scene(None)

@@ -21,6 +21,11 @@ class BaseSprite(pygame.sprite.DirtySprite):
         self.kill()
 
     @property
+    def angle(self) -> float:
+        """Current angle in degrees. Use rotate() to change it."""
+        return self._angle
+
+    @property
     def is_visible(self):
         return bool(self.visible)
 
