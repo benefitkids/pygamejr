@@ -1,5 +1,9 @@
 # Repository Guidelines
 
+## Project Tasks
+
+Tasks for pygamejr are tracked in Linear: https://linear.app/codomir/project/pygamejr-08f0929fa267/overview. Use this Linear project when working on tasks for this repository.
+
 ## Project Structure & Module Organization
 
 `src/pygamejr/` contains the core game loop, scenes, sprites, and tile maps. `src/codomir/` builds quests and maps on that library. Keep package images and TMX maps under their existing `resources/` directories; demo-specific assets belong in `demo/assets/` or beside the relevant demo. `demo/` contains runnable examples, and `tests/` contains the `pytest` suite. Packaging and test settings live in `pyproject.toml`.
