@@ -292,6 +292,18 @@ class Player(BaseSprite):
         self._direction = Direction.LEFT
         self._move_to(self._tile_x - 1, self._tile_y)
 
+    def is_box_ahead(self) -> bool:
+        """Read whether the adjacent cell contains a box, even after completion."""
+        dx, dy = {
+            Direction.TOP: (0, -1),
+            Direction.RIGHT: (1, 0),
+            Direction.BOTTOM: (0, 1),
+            Direction.LEFT: (-1, 0),
+        }[self._direction]
+        tile_x, tile_y = self._tile_x + dx, self._tile_y + dy
+        return (self._is_inside_map(tile_x, tile_y)
+                and (tile_x, tile_y) in quest_scene.box_positions)
+
     def move_forward(self):
         if self._direction == Direction.TOP:
             self._move_top()
@@ -309,7 +321,7 @@ class Player(BaseSprite):
         dx = tile_x - self._tile_x
         dy = tile_y - self._tile_y
 
-        if self._is_wall(tile_x, tile_y):
+        if self._is_wall(tile_x, tile_y) or (tile_x, tile_y) in quest_scene.box_positions:
             self._animate_game_over(dx, dy)
             self._is_end = True
             self._is_game_over_state = True
@@ -336,7 +348,12 @@ class Player(BaseSprite):
         self._tile_x = tile_x
         self._tile_y = tile_y
 
+    def _is_inside_map(self, tile_x: int, tile_y: int) -> bool:
+        return 0 <= tile_x < tilemap.tmxdata.width and 0 <= tile_y < tilemap.tmxdata.height
+
     def _is_wall(self, tile_x: int, tile_y: int):
+        if not self._is_inside_map(tile_x, tile_y):
+            return True
         return tilemap.tmxdata.layernames['walls'].data[tile_y][tile_x] != 0
 
     def _is_win(self, tile_x: int, tile_y: int):

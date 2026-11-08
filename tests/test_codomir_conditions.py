@@ -1,4 +1,4 @@
-"""Box state and TMX validation, isolated from codomir import side effects."""
+"""Box state, sensors and movement, isolated from codomir import side effects."""
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -205,4 +205,162 @@ def test_box_semantics_do_not_depend_on_tileset_firstgid(tmp_path):
 import codomir.quest as quest
 set_map({str(path)!r})
 assert quest.quest_scene.box_positions == {{(2, 3), (5, 5)}}
+""")
+
+
+DIRECTION_STEPS = [
+    ('TOP', 0, -1), ('RIGHT', 1, 0), ('BOTTOM', 0, 1), ('LEFT', -1, 0),
+]
+
+
+def _ahead_scenario(tmp_path, dx, dy, obstacle):
+    start = (3, 3)
+    if obstacle == 'edge':
+        start = (7 if dx > 0 else 0 if dx < 0 else 3,
+                 7 if dy > 0 else 0 if dy < 0 else 3)
+    target = (start[0] + dx, start[1] + dy)
+
+    def change(root):
+        layers = {name: [0] * 64 for name in ('walls', 'boxes', 'objects')}
+        layers['objects'][start[1] * 8 + start[0]] = 40
+        win = target if obstacle == 'win' else (6, 6)
+        layers['objects'][win[1] * 8 + win[0]] = 75
+        if obstacle == 'wall':
+            layers['walls'][target[1] * 8 + target[0]] = 2
+        elif obstacle in ('box', 'distant_box'):
+            distance = 1 if obstacle == 'box' else 2
+            x, y = start[0] + distance * dx, start[1] + distance * dy
+            layers['boxes'][y * 8 + x] = 15
+        elif obstacle == 'edge':
+            # An open opposite edge must not be reached through negative indices.
+            x, y = target[0] % 8, target[1] % 8
+            layers['boxes'][y * 8 + x] = 15
+        for name, values in layers.items():
+            root.find(f"layer[@name='{name}']/data").text = ','.join(map(str, values))
+
+    return _variant(tmp_path, change), start, target
+
+
+@pytest.mark.parametrize(('direction', 'dx', 'dy'), DIRECTION_STEPS)
+@pytest.mark.parametrize('obstacle', ['box', 'empty', 'wall', 'edge', 'distant_box'])
+def test_box_sensor_is_pure_in_each_direction(tmp_path, direction, dx, dy, obstacle):
+    path, start, target = _ahead_scenario(tmp_path, dx, dy, obstacle)
+    _check(f"""
+import copy
+from unittest.mock import Mock
+import pygamejr
+import codomir.quest as quest
+set_map({str(path)!r})
+player._direction = quest.Direction.{direction}
+scene = quest.quest_scene
+template = copy.deepcopy(quest.tilemap.tmxdata.layernames['boxes'].data)
+boxes = dict(scene.box_sprites)
+rects = {{pos: sprite.rect.copy() for pos, sprite in boxes.items()}}
+rect = player.rect.copy()
+image = player.image
+player.on_complete = Mock()
+pygamejr.next_frame = Mock(side_effect=AssertionError('Sensor rendered a frame'))
+pygamejr.every_frame = Mock(side_effect=AssertionError('Sensor started animation'))
+player._animate_win = Mock(side_effect=AssertionError('Sensor animated a win'))
+player._animate_game_over = Mock(side_effect=AssertionError('Sensor animated a loss'))
+for finished, win, lost in [(False, False, False), (True, True, False), (True, False, True)]:
+    player._is_end, player._is_win_state, player._is_game_over_state = finished, win, lost
+    for _ in range(2):
+        assert player.is_box_ahead() is {obstacle == 'box'!r}
+    assert (player.is_finished, player.is_win, player.is_game_over) == (finished, win, lost)
+    assert (player._tile_x, player._tile_y) == {start!r}
+    assert player.rect == rect and player.image is image
+    assert player._direction == quest.Direction.{direction}
+    assert scene.box_sprites == boxes
+    assert all(sprite.rect == rects[pos] for pos, sprite in boxes.items())
+    assert quest.tilemap.tmxdata.layernames['boxes'].data == template
+player.on_complete.assert_not_called()
+pygamejr.next_frame.assert_not_called()
+pygamejr.every_frame.assert_not_called()
+player._animate_win.assert_not_called()
+player._animate_game_over.assert_not_called()
+""")
+
+
+def test_box_sensor_reads_current_positions_instead_of_tmx():
+    _check("""
+import codomir.quest as quest
+set_map(BOX_MAP)
+assert player.is_box_ahead() is True
+quest.quest_scene._move_box((2, 3), (3, 3))
+assert player.is_box_ahead() is False
+player.set_position_by_tile(2, 3)
+assert player.is_box_ahead() is True
+player.reset()
+assert player.is_box_ahead() is True
+set_map(maps.linear.map1)
+assert player.is_box_ahead() is False
+""")
+
+
+@pytest.mark.parametrize(('direction', 'dx', 'dy'), DIRECTION_STEPS)
+@pytest.mark.parametrize('obstacle', ['box', 'wall', 'edge'])
+def test_blocked_move_loses_once_without_moving_world(tmp_path, direction, dx, dy, obstacle):
+    path, start, target = _ahead_scenario(tmp_path, dx, dy, obstacle)
+    _check(f"""
+import copy
+from unittest.mock import Mock
+import pygamejr
+import codomir.quest as quest
+set_map({str(path)!r})
+player._direction = quest.Direction.{direction}
+scene = quest.quest_scene
+boxes = dict(scene.box_sprites)
+rects = {{pos: sprite.rect.copy() for pos, sprite in boxes.items()}}
+template = copy.deepcopy(quest.tilemap.tmxdata.layernames['boxes'].data)
+rect = player.rect.copy()
+player.on_complete = Mock()
+player._animate_game_over = Mock()
+pygamejr.every_frame = Mock(side_effect=AssertionError('Blocked move animated walking'))
+pygamejr.next_frame = Mock(side_effect=AssertionError('Blocked move rendered a frame'))
+for _ in range(3):
+    assert player.move_forward() is None
+    assert player.is_finished and player.is_game_over and not player.is_win
+    assert (player._tile_x, player._tile_y) == {start!r}
+    assert player.rect == rect
+    assert scene.box_sprites == boxes
+    assert all(sprite.rect == rects[pos] for pos, sprite in boxes.items())
+    assert quest.tilemap.tmxdata.layernames['boxes'].data == template
+player._animate_game_over.assert_called_once_with({dx}, {dy})
+player.on_complete.assert_called_once_with(False)
+assert player.is_box_ahead() is {obstacle == 'box'!r}
+pygamejr.every_frame.assert_not_called()
+pygamejr.next_frame.assert_not_called()
+""")
+
+
+@pytest.mark.parametrize(('direction', 'dx', 'dy'), DIRECTION_STEPS)
+@pytest.mark.parametrize('obstacle', ['empty', 'win'])
+def test_free_move_and_win_keep_existing_behavior(tmp_path, direction, dx, dy, obstacle):
+    path, start, target = _ahead_scenario(tmp_path, dx, dy, obstacle)
+    _check(f"""
+from unittest.mock import Mock
+import pygamejr
+import codomir.quest as quest
+set_map({str(path)!r})
+player._direction = quest.Direction.{direction}
+player.on_complete = Mock()
+player._animate_win = Mock()
+pygamejr.every_frame = lambda count: iter([0] * count)
+assert player.move_forward() is None
+assert (player._tile_x, player._tile_y) == {target!r}
+assert player.rect.topleft == ({target[0] * 64}, {target[1] * 64})
+assert player.is_game_over is False
+assert player.is_finished is {obstacle == 'win'!r}
+assert player.is_win is {obstacle == 'win'!r}
+if {obstacle == 'win'!r}:
+    for _ in range(2):
+        assert player.move_forward() is None
+    assert (player._tile_x, player._tile_y) == {target!r}
+    assert player.rect.topleft == ({target[0] * 64}, {target[1] * 64})
+    player.on_complete.assert_called_once_with(True)
+    player._animate_win.assert_called_once_with()
+else:
+    player.on_complete.assert_not_called()
+    player._animate_win.assert_not_called()
 """)
