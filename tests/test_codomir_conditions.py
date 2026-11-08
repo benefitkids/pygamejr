@@ -8,6 +8,8 @@ from tests.test_codomir import _run
 
 
 BOX_MAP = Path(__file__).parent / "fixtures" / "codomir_boxes.tmx"
+CONDITIONS_MAP = BOX_MAP.parents[2] / 'src/codomir/resources/kenney_sokoban/map_conditions1.tmx'
+CONDITIONS_DEMO = BOX_MAP.parents[2] / 'demo/codomir/conditions/map1.py'
 
 
 def _check(snippet):
@@ -597,4 +599,117 @@ assert len(scene.get_sprite_list('boxes')) == 1
 player.reset()
 reset = snapshot('push-reset.png')
 assert pixels(reset) == pixels(before), 'Reset does not restore the frame'
+""")
+
+
+def test_first_conditions_map_geometry_and_public_demo():
+    _check(f"""
+import runpy
+import pygamejr
+import codomir
+import codomir.quest as quest
+set_map(maps.conditions.map1)
+data = quest.tilemap.tmxdata
+assert (data.width, data.height, data.tilewidth, data.tileheight) == (8, 8, 64, 64)
+assert pygamejr.screen.get_size() == (512, 512)
+assert set(data.layernames) == {{'background', 'walls', 'objects', 'boxes'}}
+assert quest._get_spawn_position() == (0, 3)
+assert quest.win_position == (2, 3)
+assert quest.quest_scene.box_positions == {{(1, 3)}}
+assert {{(x, y) for y, row in enumerate(data.layernames['walls'].data)
+        for x, gid in enumerate(row) if not gid}} == {{(0, 3), (1, 3), (2, 3), (3, 3)}}
+for kind, expected in [('Spawn', (0, 3)), ('Win', (2, 3))]:
+    assert [(x, y) for x, y, gid in data.layernames['objects']
+            if data.tile_properties.get(gid, {{}}).get('type') == kind] == [expected]
+pygamejr.every_frame = lambda count: iter([0] * count)
+pygamejr.next_frame = lambda: None
+codomir.wait_quit = lambda: None
+runpy.run_path({str(CONDITIONS_DEMO)!r})
+assert player.is_win and not player.is_game_over
+assert (player._tile_x, player._tile_y) == (2, 3)
+assert quest.quest_scene.box_positions == {{(3, 3)}}
+player.reset()
+assert quest.quest_scene.box_positions == {{(1, 3)}}
+assert (player._tile_x, player._tile_y) == (0, 3)
+assert not player.is_finished
+""")
+
+
+@pytest.mark.parametrize(('box', 'expected_actions', 'expected_sensor'), [
+    ((1, 3), ['push', 'push'], [True, True]),
+    (None, ['move_forward', 'move_forward'], [False, False]),
+    ((2, 3), ['move_forward', 'push'], [False, True]),
+])
+def test_first_conditions_solution_handles_box_variants(tmp_path, box, expected_actions, expected_sensor):
+    root = ET.parse(CONDITIONS_MAP).getroot()
+    root.find('tileset').set('source', str(
+        CONDITIONS_MAP.with_name('sokoban_tilesheet.tsx').resolve()
+    ))
+    values = [0] * 64
+    if box is not None:
+        values[box[1] * 8 + box[0]] = 15
+    root.find("layer[@name='boxes']/data").text = ','.join(map(str, values))
+    variant = tmp_path / 'conditions1.tmx'
+    ET.ElementTree(root).write(variant, encoding='UTF-8', xml_declaration=True)
+    _check(f"""
+import ast
+import runpy
+from pathlib import Path
+import pygamejr
+import codomir
+import codomir.quest as quest
+source = Path({str(CONDITIONS_DEMO)!r}).read_text(encoding='utf-8')
+tree = ast.parse(source)
+assert all(isinstance(node, (ast.ImportFrom, ast.Expr, ast.If)) for node in tree.body)
+conditions = [node for node in tree.body if isinstance(node, ast.If)]
+assert len(conditions) == 2
+assert sum(len(ast.get_source_segment(source, node).splitlines()) for node in conditions) == 8
+for node in conditions:
+    assert isinstance(node.test, ast.Call) and not node.test.args and not node.test.keywords
+    assert isinstance(node.test.func, ast.Attribute)
+    assert isinstance(node.test.func.value, ast.Name) and node.test.func.value.id == 'player'
+    assert node.test.func.attr == 'is_box_ahead'
+    for branch, command in [(node.body, 'push'), (node.orelse, 'move_forward')]:
+        assert len(branch) == 1 and isinstance(branch[0], ast.Expr)
+        call = branch[0].value
+        assert isinstance(call, ast.Call) and not call.args and not call.keywords
+        assert isinstance(call.func, ast.Attribute) and call.func.attr == command
+        assert isinstance(call.func.value, ast.Name) and call.func.value.id == 'player'
+
+def select_variant(selected):
+    assert selected == maps.conditions.map1
+    set_map({str(variant)!r})
+codomir.set_map = select_variant
+codomir.wait_quit = lambda: None
+pygamejr.every_frame = lambda count: iter([0] * count)
+pygamejr.next_frame = lambda: None
+actions, sensors, completions = [], [], []
+sensor = player.is_box_ahead
+def checked_sensor():
+    assert not player.is_finished
+    result = sensor()
+    sensors.append(result)
+    return result
+player.is_box_ahead = checked_sensor
+def checked_command(name, command):
+    def run():
+        assert not player.is_finished, 'Command after reaching Win'
+        actions.append(name)
+        command()
+    return run
+player.push = checked_command('push', player.push)
+player.move_forward = checked_command('move_forward', player.move_forward)
+player.on_complete = completions.append
+runpy.run_path({str(CONDITIONS_DEMO)!r})
+assert player.is_win and not player.is_game_over
+assert (player._tile_x, player._tile_y) == (2, 3)
+assert quest.quest_scene.box_positions == {({(3, 3)} if box else set())!r}
+assert actions == {expected_actions!r}
+assert sensors == {expected_sensor!r}
+assert completions == [True]
+player.reset()
+assert quest.quest_scene.box_positions == {({box} if box else set())!r}
+assert (player._tile_x, player._tile_y) == (0, 3)
+assert player._direction == quest.Direction.RIGHT
+assert not player.is_finished
 """)
