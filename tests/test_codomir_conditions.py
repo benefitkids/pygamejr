@@ -1,5 +1,7 @@
 """Box state, sensors and movement, isolated from codomir import side effects."""
 from pathlib import Path
+import ast
+import json
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -10,6 +12,29 @@ from tests.test_codomir import _run
 BOX_MAP = Path(__file__).parent / "fixtures" / "codomir_boxes.tmx"
 CONDITIONS_MAP = BOX_MAP.parents[2] / 'src/codomir/resources/kenney_sokoban/map_conditions1.tmx'
 CONDITIONS_DEMO = BOX_MAP.parents[2] / 'demo/codomir/conditions/map1.py'
+MANIFEST = json.loads((BOX_MAP.parent / 'codomir_conditions.json').read_text(encoding='utf-8'))['maps']
+
+
+def test_conditions_manifest_matches_public_exports():
+    exports = ast.parse((BOX_MAP.parents[2] / 'src/codomir/maps/conditions.py').read_text(encoding='utf-8'))
+    numbers = [entry['number'] for entry in MANIFEST]
+    assert len(numbers) == len(set(numbers)), 'Duplicate map number'
+    public = {int(target.id[3:]) for node in exports.body if isinstance(node, ast.Assign)
+              for target in node.targets if isinstance(target, ast.Name)
+              and target.id.startswith('map') and target.id[3:].isdigit()}
+    assert public == set(numbers), 'Every exported map needs a manifest entry'
+
+
+@pytest.mark.parametrize('entry', MANIFEST, ids=lambda entry: f"map{entry['number']}")
+def test_conditions_map_acceptance(entry, tmp_path):
+    from tests.codomir_validator import validate_entry, validate_tmx, run_engine
+    number = entry['number']
+    map_path = CONDITIONS_MAP.with_name(f'map_conditions{number}.tmx')
+    demo_path = CONDITIONS_DEMO.with_name(f'map{number}.py')
+    source = demo_path.read_text(encoding='utf-8')
+    validate_entry(entry, source)
+    validate_tmx(entry, map_path)
+    run_engine(entry, source, map_path, tmp_path)
 
 
 def _check(snippet):
