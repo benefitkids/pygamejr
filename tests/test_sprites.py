@@ -6,7 +6,7 @@ import pygame
 import pytest
 
 import pygamejr
-from pygamejr.sprite.base import BaseSprite
+from pygamejr import BaseSprite
 from pygamejr.sprite.subtitles import SubtitlesSprite
 
 
