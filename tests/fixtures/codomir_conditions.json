@@ -29,6 +29,37 @@
         {"name": "without_box", "boxes": [], "final_boxes": []},
         {"name": "box_on_win", "boxes": [[2, 3]], "final_boxes": [[3, 3]]}
       ]
+    },
+    {
+      "number": 2,
+      "name": "Check again after pushing",
+      "learning_stage": "standalone_conditions",
+      "require_shorter": false,
+      "schema": [
+        "########",
+        "########",
+        "########",
+        ">.BF.###",
+        "########",
+        "########",
+        "########",
+        "########"
+      ],
+      "spawn": [0, 3],
+      "win": [3, 3],
+      "boxes": [[2, 3]],
+      "final_boxes": [[4, 3]],
+      "passages": [
+        {"start": [0, 3], "end": [3, 3], "length": 3, "turn": null, "pocket": [4, 3]}
+      ],
+      "linear_solution": ["player.move_forward()", "player.push()", "player.push()"],
+      "linear_length": 3,
+      "conditional_length": 12,
+      "variants": [
+        {"name": "without_box", "boxes": [], "final_boxes": []},
+        {"name": "box_near_spawn", "boxes": [[1, 3]], "final_boxes": [[4, 3]]},
+        {"name": "box_on_win", "boxes": [[3, 3]], "final_boxes": [[4, 3]]}
+      ]
     }
   ]
 }
