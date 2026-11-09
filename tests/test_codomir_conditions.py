@@ -37,6 +37,206 @@ def test_conditions_map_acceptance(entry, tmp_path):
     run_engine(entry, source, map_path, tmp_path)
 
 
+@pytest.mark.parametrize('entry', MANIFEST, ids=lambda entry: f"map{entry['number']}")
+def test_conditions_public_demo_replay_and_reference_solutions(entry):
+    """Exercise the public script and both controls without replacing rendering."""
+    demo = CONDITIONS_DEMO.with_name(f"map{entry['number']}.py")
+    _check(f"""
+import runpy
+from pathlib import Path
+from types import SimpleNamespace
+import pygamejr
+import pygamejr.base as base
+import codomir
+import codomir.quest as quest
+from tests.codomir_validator import validate_source
+
+entry = {entry!r}
+base.clock = SimpleNamespace(tick=lambda fps: 16)
+codomir.wait_quit = lambda: None
+completions = []
+player.on_complete = completions.append
+source = Path({str(demo)!r}).read_text(encoding='utf-8')
+tree, _ = validate_source(source, entry['learning_stage'], number=entry['number'], require_demo=True)
+commands = {{name: getattr(player, name) for name in ('push', 'move_forward', 'turn_left', 'turn_right')}}
+
+def guarded(command):
+    def run():
+        assert not player.is_finished, 'Demo or reference command after Win'
+        return command()
+    return run
+for name, command in commands.items():
+    setattr(player, name, guarded(command))
+
+def check_boxes(expected):
+    scene = quest.quest_scene
+    assert scene.box_positions == set(map(tuple, expected))
+    group = scene.get_sprite_list('boxes')
+    assert len(group) == len(expected)
+    assert set(group) == set(scene.box_sprites.values())
+    for (x, y), sprite in scene.box_sprites.items():
+        assert sprite.rect.topleft == (x * 64, y * 64)
+        assert sprite.visible and sprite.groups() == [group]
+
+def check_win(count):
+    assert player.is_finished and player.is_win and not player.is_game_over
+    assert (player._tile_x, player._tile_y) == tuple(entry['win'])
+    assert completions == [True] * count
+    check_boxes(entry['final_boxes'])
+    # Finished movement must not fire the completion callback again.
+    commands['push']()
+    commands['move_forward']()
+    assert completions == [True] * count
+    check_boxes(entry['final_boxes'])
+
+def reset():
+    player.reset()
+    assert not any((player.is_finished, player.is_win, player.is_game_over))
+    assert (player._tile_x, player._tile_y) == tuple(entry['spawn'])
+    assert player._direction == quest.Direction.RIGHT
+    check_boxes(entry['boxes'])
+
+runpy.run_path({str(demo)!r})
+assert pygamejr.screen.get_size() == (512, 512)
+check_win(1)
+reset()
+# Replay the teaching body on the same scene, without set_map masking reset bugs.
+exec(compile(tree, '<conditions-replay>', 'exec'), {{'player': player}})
+check_win(2)
+reset()
+exec('\\n'.join(entry['linear_solution']), {{'player': player}})
+check_win(3)
+if entry['number'] >= 4:
+    reset()
+    exec('\\n'.join(entry['loop_solution']), {{'player': player}})
+    check_win(4)
+
+reset()
+previous = list(completions)
+player.turn_left()
+player.move_forward()
+assert player.is_game_over and not player.is_win
+assert completions == previous + [False]
+commands['move_forward']()
+commands['push']()
+assert completions == previous + [False]
+reset()
+assert completions == previous + [False]
+""")
+
+
+@pytest.mark.parametrize(('family', 'folder'), [
+    ('linear', None), ('loop', 'loop'), ('nested_loops', 'nested_loop'),
+])
+def test_conditions_switch_to_legacy_maps_and_back(family, folder):
+    if folder is None:
+        legacy_demo = CONDITIONS_DEMO.parents[1] / 'map1_win.py'
+    else:
+        legacy_demo = CONDITIONS_DEMO.parents[1] / folder / 'map1.py'
+    _check(f"""
+import runpy
+from types import SimpleNamespace
+import codomir
+import codomir.quest as quest
+import pygamejr.base as base
+
+base.clock = SimpleNamespace(tick=lambda fps: 16)
+codomir.wait_quit = lambda: None
+completions = []
+player.on_complete = completions.append
+for cycle in range(2):
+    set_map(maps.conditions.map9)
+    old_scene = quest.quest_scene
+    old_boxes = list(old_scene.box_sprites.values())
+    player.push()  # Deliberate loss: the initial neighboring cell is empty.
+    assert player.is_game_over and completions == [False, True] * cycle + [False]
+    set_map(getattr(maps, {family!r}).map1)
+    runpy.run_path({str(legacy_demo)!r})
+    assert player.is_win and not player.is_game_over
+    assert completions == [False, True] * (cycle + 1)
+    assert not quest.quest_scene.box_positions
+    assert not quest.quest_scene.get_sprite_list('boxes')
+    assert not old_scene.box_positions
+    assert not old_scene.get_sprite_list('boxes')
+    assert all(not sprite.groups() for sprite in old_boxes)
+    assert player not in old_scene.get_sprite_list('default')
+    assert player in quest.quest_scene.get_sprite_list('default')
+    legacy_scene = quest.quest_scene
+    set_map(maps.conditions.map9)
+    assert player not in legacy_scene.get_sprite_list('default')
+    assert not player.is_finished and player._direction == quest.Direction.RIGHT
+    assert quest.quest_scene.box_positions == {{(2, 0), (6, 4), (3, 6), (1, 4), (2, 3)}}
+    assert len(quest.quest_scene.get_sprite_list('boxes')) == 5
+    assert completions == [False, True] * (cycle + 1)
+""")
+
+
+@pytest.mark.parametrize('number', [1, 9], ids=lambda number: f'map{number}')
+def test_conditions_push_frames_and_reset(number, tmp_path):
+    entry = next(entry for entry in MANIFEST if entry['number'] == number)
+    _check(f"""
+from pathlib import Path
+from types import SimpleNamespace
+import pygame
+import pygamejr
+import pygamejr.base as base
+import codomir.quest as quest
+
+base.clock = SimpleNamespace(tick=lambda fps: 16)
+set_map(getattr(maps.conditions, 'map{number}'))
+assert pygamejr.screen.get_size() == (512, 512)
+scene = quest.quest_scene
+output = Path({str(tmp_path)!r})
+
+def snapshot(name):
+    pygamejr.next_frame()
+    pygame.image.save(pygamejr.screen, str(output / name))
+    return pygamejr.screen.copy()
+
+def pixels(surface):
+    return pygame.image.tobytes(surface, 'RGB')
+
+initial = snapshot('initial.png')
+if {number} == 9:
+    player.move_forward()
+before = snapshot('before-push.png')
+source = (player._tile_x, player._tile_y)
+old_cell = pygame.Rect(source[0] * 64, source[1] * 64, 64, 64)
+box_source = (source[0] + 1, source[1])
+box = scene.box_sprites[box_source]
+player.visible = box.visible = False
+background = snapshot('background.png')
+player.visible = box.visible = True
+player.push()
+last_frame = pygamejr.screen.copy()
+after = snapshot('after-push.png')
+assert pixels(last_frame) == pixels(after)
+assert pixels(before) != pixels(after)
+assert pixels(after.subsurface(old_cell)) == pixels(background.subsurface(old_cell)), 'Ghost sprite'
+destination = pygame.Rect((box_source[0] + 1) * 64, box_source[1] * 64, 64, 64)
+expected = background.subsurface(destination).copy()
+expected.blit(box.image, (0, 0))
+assert pixels(after.subsurface(destination)) == pixels(expected)
+win = {entry['win']!r}
+win_cell = pygame.Rect(win[0] * 64, win[1] * 64, 64, 64)
+# Compare the finish with a clean render without movable sprites.
+player.visible = False
+for sprite in scene.box_sprites.values():
+    sprite.visible = False
+clean = snapshot('finish-visible.png')
+if not win_cell.colliderect(player.rect) and not any(
+        win_cell.colliderect(sprite.rect) for sprite in scene.box_sprites.values()):
+    assert pixels(after.subsurface(win_cell)) == pixels(clean.subsurface(win_cell))
+player.visible = True
+for sprite in scene.box_sprites.values():
+    sprite.visible = True
+assert len(scene.get_sprite_list('boxes')) == len({entry['boxes']!r})
+player.reset()
+reset = snapshot('reset.png')
+assert pixels(reset) == pixels(initial)
+""")
+
+
 def _check(snippet):
     result = _run(f"BOX_MAP = {str(BOX_MAP.resolve())!r}\n" + snippet)
     assert result.returncode == 0, result.stdout + result.stderr
