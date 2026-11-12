@@ -325,6 +325,8 @@ sprites = tilemap.get_layer_sprites("Ground")
 
 ## API Reference — codomir
 
+Lesson: [conditions and boxes — 10 maps](docs/codomir/conditions.md).
+
 ### Player
 
 The `player` singleton is created automatically on `import codomir`.

@@ -3,6 +3,7 @@ import os
 import json
 import pygame
 from pygame.sprite import Group
+from pytmx import TiledObjectGroup, TiledTileLayer
 
 # https://stackoverflow.com/questions/4135928/pygame-display-position
 pygame.init()
@@ -63,12 +64,58 @@ def _get_win_position():
     return _get_position_by_type('Win')
 
 
-def _get_position_by_type(tile_type):
-    for tile in tilemap.tmxdata.layernames['objects']:
+def _get_position_by_type(tile_type, source=None):
+    data = (source or tilemap).tmxdata
+    for tile in data.layernames['objects']:
         tile_id = tile[2]
-        if tile_id and tilemap.tmxdata.tile_properties[tile_id]['type'] == tile_type:
+        if tile_id and data.tile_properties.get(tile_id, {}).get('type') == tile_type:
             return tile[0], tile[1]
     return 0, 0
+
+
+def _get_initial_boxes(tilemap):
+    """Validate Box tiles before creating sprites or replacing the active map."""
+    data = tilemap.tmxdata
+    if sum(layer.name == 'boxes' for layer in data.layers) > 1:
+        raise ValueError("The map must have at most one boxes layer")
+    spawn_positions = {
+        (x, y) for x, y, gid in data.layernames['objects']
+        if data.tile_properties.get(gid, {}).get('type') == 'Spawn'
+    }
+    boxes = []
+    for layer in data.layers:
+        if layer.name == 'boxes':
+            if not isinstance(layer, TiledTileLayer):
+                raise ValueError("The boxes layer must be a tile layer")
+            if (layer.width, layer.height) != (data.width, data.height):
+                raise ValueError("The boxes layer dimensions must match the map")
+            if any(getattr(layer, name, 0) for name in ('x', 'y', 'offsetx', 'offsety')):
+                raise ValueError("The boxes layer must not have an offset")
+        if isinstance(layer, TiledObjectGroup):
+            for obj in layer:
+                properties = data.tile_properties.get(getattr(obj, 'gid', 0), {})
+                if obj.type == 'Box' or properties.get('type') == 'Box':
+                    raise ValueError("Box objects must be tiles in the boxes layer")
+        if not isinstance(layer, TiledTileLayer):
+            continue
+        for x, y, gid in layer:
+            if not gid:
+                continue
+            is_box = data.tile_properties.get(gid, {}).get('type') == 'Box'
+            if is_box and layer.name != 'boxes':
+                raise ValueError(f"Box at ({x}, {y}) must be in the boxes layer")
+            if layer.name != 'boxes':
+                continue
+            if not is_box:
+                raise ValueError(f"Tile at ({x}, {y}) in boxes must have type Box")
+            if not (0 <= x < data.width and 0 <= y < data.height):
+                raise ValueError(f"Box at ({x}, {y}) is outside the map")
+            if data.layernames['walls'].data[y][x]:
+                raise ValueError(f"Box at ({x}, {y}) overlaps a wall")
+            if (x, y) in spawn_positions:
+                raise ValueError(f"Box at ({x}, {y}) overlaps Spawn")
+            boxes.append((x, y, gid))
+    return tuple(boxes)
 
 
 # =================================================================
@@ -81,17 +128,57 @@ def _get_position_by_type(tile_type):
 class QuestScene(pygamejr.Scene):
     def __init__(self, tilemap):
         super().__init__()
+        self._initial_boxes = _get_initial_boxes(tilemap)
+        self.initial_box_positions = tuple((x, y) for x, y, gid in self._initial_boxes)
+        self.box_sprites = {}
+        self._tilemap = tilemap
         # Temporarily set this scene as current so that ImageSprite
         # objects created inside get_layer_sprites() auto-add here.
         previous_scene = pygamejr.get_current_scene()
         pygamejr.set_scene(self)
-        for layer in tilemap.tmxdata.layers:
-            if hasattr(layer, 'tiles'):
-                sprites = tilemap.get_layer_sprites(layer.name)
-                self.add_sprite_list(layer.name, Group(sprites))
-        # Clear DEFAULT_LAYER — tile sprites now live in named layer groups.
-        self._name_mapping[DEFAULT_LAYER].empty()
-        pygamejr.set_scene(previous_scene)
+        try:
+            for layer in tilemap.tmxdata.layers:
+                if layer.name == 'boxes':
+                    continue
+                if hasattr(layer, 'tiles'):
+                    sprites = tilemap.get_layer_sprites(layer.name)
+                    self.add_sprite_list(layer.name, Group(sprites))
+            # Clear DEFAULT_LAYER — tile sprites now live in named layer groups.
+            self._name_mapping[DEFAULT_LAYER].empty()
+            self.add_sprite_list('boxes', Group())
+            self._reset_boxes()
+        finally:
+            pygamejr.set_scene(previous_scene)
+
+    @property
+    def box_positions(self):
+        return frozenset(self.box_sprites)
+
+    def _clear_boxes(self):
+        for sprite in self.box_sprites.values():
+            sprite.kill()
+        self.box_sprites.clear()
+
+    def _reset_boxes(self):
+        self._clear_boxes()
+        for x, y, gid in self._initial_boxes:
+            sprite = pygamejr.ImageSprite(
+                image=self._tilemap.tmxdata.get_tile_image_by_gid(gid),
+                crop_alpha=False,
+                scene=self,
+            )
+            self.remove(sprite)
+            sprite.rect.topleft = (x * TILE_SIZE, y * TILE_SIZE)
+            self.get_sprite_list('boxes').add(sprite)
+            self.box_sprites[(x, y)] = sprite
+
+    def _move_box(self, source, destination):
+        """Keep current coordinates and rendering together; leave TMX unchanged."""
+        if destination in self.box_sprites:
+            raise ValueError(f"A box already occupies {destination}")
+        sprite = self.box_sprites.pop(source)
+        sprite.rect.topleft = (destination[0] * TILE_SIZE, destination[1] * TILE_SIZE)
+        self.box_sprites[destination] = sprite
 
     def draw(self, draw_rect=False):
         # Draw tilemap layers first, then player (DEFAULT_LAYER) on top.
@@ -150,6 +237,7 @@ class Player(BaseSprite):
         self._on_complete = callback
 
     def reset(self):
+        quest_scene._reset_boxes()
         self._is_end = False
         self._is_win_state = False
         self._is_game_over_state = False
@@ -204,6 +292,42 @@ class Player(BaseSprite):
         self._direction = Direction.LEFT
         self._move_to(self._tile_x - 1, self._tile_y)
 
+    def _direction_step(self):
+        return {
+            Direction.TOP: (0, -1),
+            Direction.RIGHT: (1, 0),
+            Direction.BOTTOM: (0, 1),
+            Direction.LEFT: (-1, 0),
+        }[self._direction]
+
+    def is_box_ahead(self) -> bool:
+        """Read whether the adjacent cell contains a box, even after completion."""
+        dx, dy = self._direction_step()
+        tile_x, tile_y = self._tile_x + dx, self._tile_y + dy
+        return (self._is_inside_map(tile_x, tile_y)
+                and (tile_x, tile_y) in quest_scene.box_positions)
+
+    def push(self) -> None:
+        """Push one adjacent box, or lose without moving either participant."""
+        if self._is_end:
+            return
+
+        dx, dy = self._direction_step()
+        source = (self._tile_x + dx, self._tile_y + dy)
+        destination = (source[0] + dx, source[1] + dy)
+        if (self._is_wall(*source)
+                or source not in quest_scene.box_positions
+                or self._is_wall(*destination)
+                or destination in quest_scene.box_positions):
+            self._animate_game_over(dx, dy)
+            self._is_end = True
+            self._is_game_over_state = True
+            if self._on_complete:
+                self._on_complete(False)
+            return
+
+        self._animate_move(*source, box_source=source)
+
     def move_forward(self):
         if self._direction == Direction.TOP:
             self._move_top()
@@ -221,7 +345,7 @@ class Player(BaseSprite):
         dx = tile_x - self._tile_x
         dy = tile_y - self._tile_y
 
-        if self._is_wall(tile_x, tile_y):
+        if self._is_wall(tile_x, tile_y) or (tile_x, tile_y) in quest_scene.box_positions:
             self._animate_game_over(dx, dy)
             self._is_end = True
             self._is_game_over_state = True
@@ -229,26 +353,42 @@ class Player(BaseSprite):
                 self._on_complete(False)
             return
 
+        self._animate_move(tile_x, tile_y)
+
+    def _animate_move(self, tile_x: int, tile_y: int, box_source=None):
+        dx = tile_x - self._tile_x
+        dy = tile_y - self._tile_y
+        start_x, start_y = self.rect.topleft
+        box = quest_scene.box_sprites[box_source] if box_source is not None else None
+        if box is not None:
+            box_x, box_y = box.rect.topleft
         character_tiles_count = len(self.images)
         # Scene draws each frame automatically after the yield in every_frame().
         for i, dt in enumerate(pygamejr.every_frame(TILE_SIZE)):
-            self.rect.x += dx
-            self.rect.y += dy
+            progress = min(i + 1, TILE_SIZE)
+            self.rect.topleft = (start_x + dx * progress, start_y + dy * progress)
+            if box is not None:
+                box.rect.topleft = (box_x + dx * progress, box_y + dy * progress)
             self.image = self.images[int((i // (TILE_SIZE / 6)) % character_tiles_count)]
 
         self.image = self.images[0]
+        self.set_position_by_tile(tile_x, tile_y)
+        if box is not None:
+            quest_scene._move_box(box_source, (box_source[0] + dx, box_source[1] + dy))
 
         if self._is_win(tile_x, tile_y):
-            self._animate_win()
             self._is_end = True
             self._is_win_state = True
+            self._animate_win()
             if self._on_complete:
                 self._on_complete(True)
 
-        self._tile_x = tile_x
-        self._tile_y = tile_y
+    def _is_inside_map(self, tile_x: int, tile_y: int) -> bool:
+        return 0 <= tile_x < tilemap.tmxdata.width and 0 <= tile_y < tilemap.tmxdata.height
 
     def _is_wall(self, tile_x: int, tile_y: int):
+        if not self._is_inside_map(tile_x, tile_y):
+            return True
         return tilemap.tmxdata.layernames['walls'].data[tile_y][tile_x] != 0
 
     def _is_win(self, tile_x: int, tile_y: int):
@@ -303,7 +443,9 @@ def set_map(map):
     '''
     global tilemap, quest_scene, win_position, CHARACTER_TILES
 
-    tilemap = pygamejr.TileMap(map)
+    new_tilemap = pygamejr.TileMap(map)
+    new_scene = QuestScene(new_tilemap)
+    tilemap = new_tilemap
     CHARACTER_TILES = {
         'right':  json.loads(tilemap.tmxdata.properties['character_right'])  if 'character_right'  in tilemap.tmxdata.properties else None,
         'bottom': json.loads(tilemap.tmxdata.properties['character_bottom']) if 'character_bottom' in tilemap.tmxdata.properties else None,
@@ -312,7 +454,8 @@ def set_map(map):
     }
 
     old_scene = quest_scene
-    quest_scene = QuestScene(tilemap)
+    quest_scene = new_scene
+    old_scene._clear_boxes()
 
     # Move player from old scene to new scene.
     old_scene.remove(player)
@@ -320,6 +463,7 @@ def set_map(map):
     pygamejr.set_scene(quest_scene)
 
     player.set_position_by_tile(*_get_spawn_position())
+    player._direction = Direction.RIGHT
     player._update_image()
     player._is_end = False
     player._is_win_state = False

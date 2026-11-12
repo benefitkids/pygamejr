@@ -325,6 +325,8 @@ sprites = tilemap.get_layer_sprites("Ground")
 
 ## API Reference — codomir
 
+Урок: [условия и ящики — 10 карт](docs/codomir/conditions_ru.md).
+
 ### Игрок (player)
 
 Синглтон `player` создаётся автоматически при импорте codomir.
