@@ -32,6 +32,10 @@ def test_conditions_map_acceptance(entry, tmp_path):
     map_path = CONDITIONS_MAP.with_name(f'map_conditions{number}.tmx')
     demo_path = CONDITIONS_DEMO.with_name(f'map{number}.py')
     source = demo_path.read_text(encoding='utf-8')
+    if 'conditional_solution' in entry:
+        source = (f'from codomir import player, set_map, wait_quit, maps\n'
+                  f'set_map(maps.conditions.map{number})\n'
+                  + '\n'.join(entry['conditional_solution']) + '\nwait_quit()\n')
     validate_entry(entry, source)
     validate_tmx(entry, map_path)
     run_engine(entry, source, map_path, tmp_path)
@@ -57,7 +61,10 @@ codomir.wait_quit = lambda: None
 completions = []
 player.on_complete = completions.append
 source = Path({str(demo)!r}).read_text(encoding='utf-8')
-tree, _ = validate_source(source, entry['learning_stage'], number=entry['number'], require_demo=True)
+tree, demo_length = validate_source(source, entry['learning_stage'], number=entry['number'],
+                          mode=entry.get('demo_mode', 'conditional'), require_demo=True)
+if 'demo_length' in entry:
+    assert demo_length == entry['demo_length']
 commands = {{name: getattr(player, name) for name in ('push', 'move_forward', 'turn_left', 'turn_right')}}
 
 def guarded(command):
@@ -113,7 +120,10 @@ if entry['number'] >= 4:
 
 reset()
 previous = list(completions)
-player.turn_left()
+if entry.get('initial_turn') == 'left':
+    player.turn_right()
+else:
+    player.turn_left()
 player.move_forward()
 assert player.is_game_over and not player.is_win
 assert completions == previous + [False]
@@ -883,7 +893,8 @@ from pathlib import Path
 import pygamejr
 import codomir
 import codomir.quest as quest
-source = Path({str(CONDITIONS_DEMO)!r}).read_text(encoding='utf-8')
+from tests.test_codomir_validator import first_source
+source = first_source()
 tree = ast.parse(source)
 assert all(isinstance(node, (ast.ImportFrom, ast.Expr, ast.If)) for node in tree.body)
 conditions = [node for node in tree.body if isinstance(node, ast.If)]
@@ -925,7 +936,7 @@ def checked_command(name, command):
 player.push = checked_command('push', player.push)
 player.move_forward = checked_command('move_forward', player.move_forward)
 player.on_complete = completions.append
-runpy.run_path({str(CONDITIONS_DEMO)!r})
+exec(compile(source, '<conditions1-teacher>', 'exec'), {{}})
 assert player.is_win and not player.is_game_over
 assert (player._tile_x, player._tile_y) == (2, 3)
 assert quest.quest_scene.box_positions == {({(3, 3)} if box else set())!r}
