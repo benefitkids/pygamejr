@@ -43,6 +43,8 @@ There is **nothing to log into**. There is no `.env` file and no secrets are req
 
 ### Headless (Cloud agent default)
 
+On Windows/PowerShell, create the environment if missing with `python -m venv .venv`, then use `.venv/Scripts/python -m pip install -e '.[test]'`. Run tests with `$env:SDL_VIDEODRIVER='dummy'; $env:SDL_AUDIODRIVER='dummy'; .venv/Scripts/python -m pytest`.
+
 The Cloud VM has no real display or audio. Always export these before running anything that imports `pygamejr` or `codomir`:
 
 ```bash
@@ -77,6 +79,7 @@ There is **no feature-flag system to mock**. If a future change introduces one, 
 ```bash
 python demo/1simple.py
 python demo/scene.py
+python demo/asteroids.py
 python demo/codomir/loop/map1.py
 ```
 
@@ -111,7 +114,7 @@ pygame.image.save(pygamejr.screen, "/tmp/bee.png")
 
 ## 3. Testing workflows by codebase area
 
-There is no `pytest` suite. The patterns below are what a Cloud agent should produce when asked to verify a change.
+Run the `pytest` suite under `tests/` first. The patterns below provide additional focused checks when verifying a change.
 
 ### 3.1 `src/pygamejr/` — core engine
 
@@ -251,11 +254,14 @@ python -c "import pygamejr, codomir; print(pygamejr.__file__); print(codomir.__f
 ## 4. Common gotchas
 
 - **Window appears at import time.** Set `SDL_VIDEODRIVER=dummy` *before* `import pygamejr`. In an inline `python - <<'PY'` block, set `os.environ["SDL_VIDEODRIVER"]="dummy"` on the first line if you cannot export it in the parent shell.
+- **Codomir screenshot import order:** import `codomir` before `pygamejr` in a fresh process, then assert `pygamejr.screen.get_size() == (512, 512)`. Importing `pygamejr` first creates its default window before codomir sets the size environment variables (`src/pygamejr/base.py`, `src/codomir/quest.py`).
 - **`codomir` overrides window size.** Don't try to set `PYGAMEJR_WINDOW_WIDTH` for a `codomir` test — it will be replaced by `512`.
 - **Movement methods block.** `player.move_forward()` runs ~60 frames of animation and is single-threaded. A four-step movement sequence takes a few seconds even headless.
+- **Fast solution checks:** in subprocess tests, `pygamejr.every_frame = lambda count: iter([0] * count)` preserves all 64 movement updates without frame delays (see `tests/test_codomir.py`). Stub `pygamejr.next_frame` and `codomir.wait_quit` as well when executing demo solutions; keep real rendering for screenshot checks.
 - **Win/game-over animations are slow.** `_animate_win` runs ~10 s of frames; `_animate_game_over` runs a multi-second shake. In tests, monkey-patch `player._animate_win = lambda: None` and `player._animate_game_over = lambda dx, dy: None` before triggering them.
 - **`timeout 124` ≠ failure** for any script that ends with `wait_quit()` or contains an unbounded `every_frame()` loop. Check actual output / saved artifact instead of exit code.
-- **No automated tests, no linter config.** Don't waste time looking for `pytest`, `ruff`, or CI configuration. If you need to introduce them, ask the user first.
+- **Bounded frame counts are currently off by one.** `every_frame(frame_count=N)` runs `N + 1` iterations for positive `N` (see `src/pygamejr/base.py`). It still bounds smoke checks, but do not assume exactly `N` updates in assertions.
+- **Automated tests exist, but no linter config is present.** Run `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python -m pytest` and use focused checks below for visual behavior.
 - **ALSA noise on stderr** when audio is real but no card is present. Harmless; `SDL_AUDIODRIVER=dummy` silences it.
 - **`is_quit()` is sticky.** Once any module sets the internal flag, the process is dead for further frames; spawn a fresh subprocess per test.
 

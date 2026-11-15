@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET_LENGTHS = [(2, 8), (3, 12), (5, 17), (13, 11), (18, 17),
+TARGET_LENGTHS = [(2, 8), (3, 12), (8, 26), (14, 7), (18, 17),
                   (19, 17), (19, 12), (23, 18), (26, 24), (26, 24)]
 STAGES = ['standalone_conditions', 'conditions_in_simple_loops',
           'conditions_in_complex_routes']
@@ -146,7 +146,7 @@ def validate_source(source, stage, number=None, mode='conditional', require_demo
                 count += 2 + visit(node.body, depth) + visit(node.orelse, depth)
             elif isinstance(node, ast.For):
                 assert mode != 'linear', 'Linear solution must not contain loops'
-                assert stage != STAGES[0], 'No loops in introductory maps'
+                assert stage != STAGES[0] or mode == 'loop', 'No loops in introductory maps'
                 assert stage != STAGES[1] or depth == 0, 'No nested loops in simple stage'
                 assert depth < 3, 'Excessive loop nesting'
                 assert isinstance(node.target, ast.Name) and node.target.id not in (
@@ -223,15 +223,19 @@ def check_loop_coverage(trace):
 def validate_geometry(entry):
     schema = entry['schema']
     assert len(schema) == 8 and all(len(row) == 8 for row in schema), 'Schema must be 8x8'
-    assert set(''.join(schema)) <= set('#.>FB'), 'Unknown schema symbol'
+    assert set(''.join(schema)) <= set('#.>FB*'), 'Unknown schema symbol'
     for char, key in [('>', 'spawn'), ('F', 'win'), ('B', 'boxes')]:
         expected = cells(entry[key]) if key == 'boxes' else {tuple(entry[key])}
-        actual = {(x, y) for y, row in enumerate(schema) for x, value in enumerate(row) if value == char}
+        actual = {(x, y) for y, row in enumerate(schema) for x, value in enumerate(row)
+                  if value == char or (value == '*' and key in ('win', 'boxes'))}
         assert actual == expected, f'Schema {key} mismatch'
     assert len(entry['boxes']) == len(cells(entry['boxes'])), 'Duplicate boxes'
     passages = entry['passages']
     assert passages and tuple(passages[0]['start']) == tuple(entry['spawn'])
-    direction, walked = 0, set()
+    initial_turn = entry.get('initial_turn')
+    assert initial_turn in (None, 'left', 'right'), 'Invalid initial turn'
+    direction = (1 if initial_turn == 'right' else -1 if initial_turn == 'left' else 0) % 4
+    walked = set()
     for index, passage in enumerate(passages):
         start, end = tuple(passage['start']), tuple(passage['end'])
         dx, dy = STEPS[direction]
@@ -260,18 +264,21 @@ def required_variants(entry):
     if number == 2:
         return {frozenset(), frozenset({(1, 3)}), frozenset({(3, 3)})}
     if number == 3:
-        return {frozenset({(3, 2)}), frozenset({(2, 1)}), frozenset(),
-                frozenset({(3, 1), (3, 2)})}
+        return {frozenset({(4, 4)}), frozenset({(5, 2)}), frozenset(),
+                frozenset({(5, 4), (4, 4)})}
     start = entry['passages'][0]['start']
     first = min(boxes, key=lambda pos: abs(pos[0] - start[0]) + abs(pos[1] - start[1]))
-    return {(cells(boxes) - {first}) | {(start[0] + distance, start[1])}
+    end = entry['passages'][0]['end']
+    dx = (end[0] > start[0]) - (end[0] < start[0])
+    dy = (end[1] > start[1]) - (end[1] < start[1])
+    return {(cells(boxes) - {first}) | {(start[0] + distance * dx, start[1] + distance * dy)}
             for distance in (1, 5)}
 
 
 def validate_entry(entry, source, require_demo=True):
     number = entry['number']
     assert type(number) is int and 1 <= number <= 10
-    stage = STAGES[0 if number <= 3 else 1 if number <= 6 else 2]
+    stage = STAGES[0 if number <= 3 else 1 if number in (5, 6) else 2]
     assert entry['learning_stage'] == stage
     assert entry['require_shorter'] is (number >= 4)
     assert (entry['linear_length'], entry['conditional_length']) == TARGET_LENGTHS[number - 1], 'Target length mismatch'

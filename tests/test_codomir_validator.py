@@ -16,7 +16,10 @@ def first_entry():
 
 
 def first_source():
-    return (ROOT / 'demo/codomir/conditions/map1.py').read_text(encoding='utf-8')
+    """Conditional teacher solution; the public demo uses direct commands."""
+    return ('from codomir import player, set_map, wait_quit, maps\n'
+            'set_map(maps.conditions.map1)\n'
+            + '\n'.join(first_entry()['conditional_solution']) + '\nwait_quit()\n')
 
 
 def test_bfs_counts_actions_not_sensor_queries():
@@ -24,9 +27,26 @@ def test_bfs_counts_actions_not_sensor_queries():
     entry = first_entry()
     assert shortest_solution(entry) == ['push', 'push']
     entry['boxes'] = []
-    assert shortest_solution(entry) == ['move_forward', 'move_forward']
-    entry['boxes'] = [[2, 3]]  # Box on Win is legal; pushing it is not yet a win.
+    assert shortest_solution(entry) == ['move_forward'] * 2
+    entry['boxes'] = [[2, 3]]  # A box on Win does not count as the hero reaching it.
     assert shortest_solution(entry) == ['move_forward', 'push']
+
+
+def test_box_on_win_schema_requires_both_box_and_finish():
+    from tests.codomir_validator import validate_geometry
+    entry = first_entry()
+    entry['schema'][3] = '>.*.####'
+    entry['boxes'] = [[2, 3]]
+    validate_geometry(entry)
+    assert entry['schema'][3][2] == '*'
+    assert entry['win'] == entry['boxes'][0] == [2, 3]
+    entry['boxes'] = []
+    with pytest.raises(AssertionError, match='boxes mismatch'):
+        validate_geometry(entry)
+    entry['boxes'] = [[2, 3]]
+    entry['win'] = [1, 3]
+    with pytest.raises(AssertionError, match='win mismatch'):
+        validate_geometry(entry)
 
 
 @pytest.mark.parametrize('bad_source', [
@@ -94,7 +114,7 @@ def test_rejects_corrupt_wall(tmp_path):
 def test_rejects_wrong_target_length():
     from tests.codomir_validator import validate_entry
     entry = first_entry()
-    entry['linear_length'] = 3
+    entry['linear_length'] = 4
     with pytest.raises(AssertionError, match='length'):
         validate_entry(entry, first_source())
 
@@ -130,38 +150,15 @@ def test_loop_coverage_requires_different_iterations_of_same_loop():
 
 
 def loop_entry():
-    """The exact COD-159 geometry exercises the next learning stage early."""
-    entry = {
-        'number': 4, 'name': 'Left turn',
-        'schema': ['######.#', '######F#', '######.#', '######B#',
-                   '######.#', '######.#', '######.#', '>.B.....'],
-        'spawn': [0, 7], 'win': [6, 1], 'boxes': [[2, 7], [6, 3]],
-        'final_boxes': [[7, 7], [6, 0]],
-        'passages': [
-            {'start': [0, 7], 'end': [6, 7], 'length': 6, 'turn': 'left', 'pocket': [7, 7]},
-            {'start': [6, 7], 'end': [6, 1], 'length': 6, 'turn': None, 'pocket': [6, 0]},
-        ],
-        'linear_solution': ['player.move_forward()'] + ['player.push()'] * 5
-            + ['player.turn_left()'] + ['player.move_forward()'] * 3 + ['player.push()'] * 3,
-        'linear_length': 13, 'conditional_length': 11,
-        'learning_stage': 'conditions_in_simple_loops', 'require_shorter': True,
-        'variants': [
-            {'name': 'near', 'boxes': [[1, 7], [6, 3]], 'final_boxes': [[7, 7], [6, 0]]},
-            {'name': 'far', 'boxes': [[5, 7], [6, 3]], 'final_boxes': [[7, 7], [6, 0]]},
-        ],
-        'loop_solution': ['player.move_forward()', 'for i in range(5):',
-                          '    player.push()', 'player.turn_left()',
-                          'for i in range(3):', '    player.move_forward()',
-                          'for i in range(3):', '    player.push()'],
-        'loop_length': 8,
-    }
-    return entry
+    """Current COD-159 geometry, including the initial left turn."""
+    return json.loads((ROOT / 'tests/fixtures/codomir_conditions.json').read_text(
+        encoding='utf-8'))['maps'][3]
 
 
 def loop_source():
-    block = ('for i in range(6):\n    if player.is_box_ahead():\n'
-             '        player.push()\n    else:\n        player.move_forward()\n')
-    return block + 'player.turn_left()\n' + block
+    return ('for i in range(2):\n    player.turn_left()\n'
+            '    for j in range(6):\n        if player.is_box_ahead():\n'
+            '            player.push()\n        else:\n            player.move_forward()\n')
 
 
 def test_loop_contract_bfs_variants_and_engine(tmp_path):
@@ -178,19 +175,18 @@ def test_loop_contract_bfs_variants_and_engine(tmp_path):
 def test_rejects_invariant_condition_on_main_loop_map():
     from tests.codomir_validator import validate_entry
     entry = loop_entry()
-    entry['boxes'][0] = [1, 7]
-    entry['boxes'][1] = [6, 6]
-    entry['schema'][7] = '>B......'
-    entry['schema'][3] = '######.#'
-    entry['schema'][6] = '######B#'
+    entry['boxes'] = [[7, 6], [6, 1]]
+    entry['schema'][5] = '#######.'
+    entry['schema'][6] = '#######B'
+    entry['schema'][1] = '.F....B.'
     entry['variants'] = [
-        {'name': 'near', 'boxes': [[1, 7], [6, 6]], 'final_boxes': [[7, 7], [6, 0]]},
-        {'name': 'far', 'boxes': [[5, 7], [6, 6]], 'final_boxes': [[7, 7], [6, 0]]},
+        {'name': 'near', 'boxes': [[7, 6], [6, 1]], 'final_boxes': [[7, 0], [0, 1]]},
+        {'name': 'far', 'boxes': [[7, 2], [6, 1]], 'final_boxes': [[7, 0], [0, 1]]},
     ]
-    entry['linear_solution'] = ['player.push()'] * 6 + ['player.turn_left()'] + ['player.push()'] * 6
-    entry['loop_solution'] = ['for i in range(6):', '    player.push()',
-                              'player.turn_left()', 'for i in range(6):', '    player.push()']
-    entry['loop_length'] = 5
+    entry['linear_solution'] = ['player.turn_left()'] + ['player.push()'] * 6 + ['player.turn_left()'] + ['player.push()'] * 6
+    entry['loop_solution'] = ['for i in range(2):', '    player.turn_left()',
+                              '    for j in range(6):', '        player.push()']
+    entry['loop_length'] = 4
     with pytest.raises(AssertionError, match='different iterations'):
         validate_entry(entry, loop_source(), require_demo=False)
 
@@ -206,10 +202,10 @@ def test_rejects_missing_required_variants():
 def test_box_at_turn_belongs_to_incoming_passage():
     from tests.codomir_validator import final_boxes
     entry = {'passages': [
-        {'start': [1, 1], 'end': [3, 1], 'pocket': [4, 1]},
-        {'start': [3, 1], 'end': [3, 3], 'pocket': [3, 4]},
+        {'start': [5, 1], 'end': [5, 4], 'pocket': [5, 5]},
+        {'start': [5, 4], 'end': [2, 4], 'pocket': [1, 4]},
     ]}
-    assert final_boxes(entry, [[3, 1], [3, 2]]) == {(4, 1), (3, 4)}
+    assert final_boxes(entry, [[5, 4], [4, 4]]) == {(5, 5), (1, 4)}
 
 
 def test_bfs_rejects_blocked_push_and_unreachable_finish():

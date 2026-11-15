@@ -5,3 +5,19 @@
 *.pyc
 /docs/superpowers/
 /artifacts/
+
+# Local publishing credentials
+/pypy.txt
+
+# Development plans and task lists belong in Linear
+**/plans/
+**/*-plan.md
+**/*-plans.md
+**/PLAN.md
+**/PLANS.md
+**/tasks.md
+**/TASKS.md
+**/todo.md
+**/TODO.md
+**/backlog.md
+**/BACKLOG.md
